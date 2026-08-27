@@ -17,11 +17,36 @@ const extrudeSettings = {
   bevelEnabled: true,
   bevelThickness: 0.05,
   bevelSize: 0.05,
-  bevelSegments: 2,
+  bevelSegments: 1,
 };
 
 function formatDimension(val: number): string {
   return Math.abs(val - Math.round(val)) < 0.05 ? `${Math.round(val)} m` : `${val.toFixed(1)} m`;
+}
+
+const geomCache = new Map<string, THREE.ExtrudeGeometry>();
+
+function getPlotGeom(plot: PlotSpec) {
+  const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
+  if (!geomCache.has(key)) {
+    const s = new THREE.Shape();
+    s.moveTo(0, 0);
+    s.lineTo(0, plot.frontage);
+    s.lineTo(-plot.depthT, plot.frontage);
+    s.lineTo(-plot.depthB, 0);
+    s.lineTo(0, 0);
+    const g = new THREE.ExtrudeGeometry(s, extrudeSettings);
+    geomCache.set(key, g);
+  }
+  return geomCache.get(key)!;
+}
+
+const matCache: Record<string, { color: string, roughness: number, metalness: number }> = {};
+function getPlotMaterial(color: string) {
+  if (!matCache[color]) {
+    matCache[color] = { color, roughness: 0.8, metalness: 0.0 };
+  }
+  return matCache[color];
 }
 
 export default function InteractivePlot({
@@ -40,14 +65,7 @@ export default function InteractivePlot({
   status?: PlotStatus;
 }) {
   const { geom, metrics, worldPos, linePoints } = useMemo(() => {
-    const s = new THREE.Shape();
-    s.moveTo(0, 0);
-    s.lineTo(0, plot.frontage);
-    s.lineTo(-plot.depthT, plot.frontage);
-    s.lineTo(-plot.depthB, 0);
-    s.lineTo(0, 0);
-
-    const g = new THREE.ExtrudeGeometry(s, extrudeSettings);
+    const g = getPlotGeom(plot);
 
     // Area calculations
     const areaSqM = ((plot.depthB + plot.depthT) / 2) * plot.frontage;
@@ -154,9 +172,7 @@ export default function InteractivePlot({
         }}
       >
         <meshStandardMaterial 
-          color={currentColor} 
-          roughness={0.8} 
-          metalness={0.0}
+          {...getPlotMaterial(currentColor)}
         />
         {/* Crisp Deep Black Border around the plot */}
         <Line 

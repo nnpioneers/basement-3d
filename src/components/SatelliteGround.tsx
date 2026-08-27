@@ -25,7 +25,7 @@ export default function SatelliteGround({
     }
 
     const loader = new THREE.TextureLoader();
-    loader.load('/satellite_map.jpg', (tex) => {
+    loader.load('/satellite_map.webp', (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.ClampToEdgeWrapping;
       tex.wrapT = THREE.ClampToEdgeWrapping;

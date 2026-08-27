@@ -248,7 +248,8 @@ export default function Scene() {
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
       <Canvas
-        shadows
+        shadows={!isMobile} // Disable expensive shadows on mobile, or keep them but optimize
+        dpr={isMobile ? [1, 1.2] : [1, 2]}
         camera={{ 
           position: isMobile ? [0, 560, 180] : [0, 420, 140], 
           fov: 45, 
@@ -257,7 +258,7 @@ export default function Scene() {
         }}
         gl={{
           logarithmicDepthBuffer: true,
-          antialias: true,
+          antialias: !isMobile,
           powerPreference: 'high-performance',
         }}
       >
@@ -266,10 +267,10 @@ export default function Scene() {
         {/* Architectural lighting balanced for satellite terrain */}
         <ambientLight intensity={mapType === 'satellite' ? 0.65 : 0.4} />
         <directionalLight 
-          castShadow 
+          castShadow={!isMobile} 
           position={[120, 250, 70]} 
           intensity={mapType === 'satellite' ? 1.6 : 1.4} 
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={isMobile ? [512, 512] : [2048, 2048]}
         >
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
