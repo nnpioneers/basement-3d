@@ -4,11 +4,7 @@ import { Instances, Instance } from '@react-three/drei';
 import { parkConfig as C } from './config';
 
 // ── Colors ───────────────────────────────────────────────────
-const TRUNK_C   = '#7a5530';
-const CANOPY_A  = '#2d8a3e';
-const CANOPY_B  = '#1e6e2e';
-const PALM_T    = '#8a6a40';
-const PALM_F    = '#3aaa50';
+
 const SHRUB_A   = '#3a9a45';
 const SHRUB_B   = '#2e7838';
 const FLOWER_R  = '#e06060';
@@ -172,42 +168,7 @@ export default function Landscape() {
 
   return (
     <group>
-      {/* ── Instanced Trees ── */}
-      <Instances range={data.trees.length} castShadow receiveShadow>
-        <cylinderGeometry args={[0.22, 0.34, 1, 7]} />
-        <meshStandardMaterial color={TRUNK_C} roughness={0.92} />
-        {data.trees.map((t, i) => (
-          <Instance key={`t_trunk_${i}`} position={[t.x, t.h / 2, t.z]} scale={[1, t.h, 1]} />
-        ))}
-      </Instances>
-      <Instances range={data.trees.length} castShadow receiveShadow>
-        <sphereGeometry args={[1, 9, 7]} />
-        <meshStandardMaterial roughness={0.88} />
-        {data.trees.map((t, i) => (
-          <Instance key={`t_canopy_${i}`} position={[t.x, t.h + t.cr * 0.6, t.z]} scale={[t.cr, t.cr, t.cr]} color={t.dark ? CANOPY_B : CANOPY_A} />
-        ))}
-      </Instances>
 
-      {/* ── Instanced Palms ── */}
-      <Instances range={data.palms.length} castShadow receiveShadow>
-        <cylinderGeometry args={[0.13, 0.22, 1, 8]} />
-        <meshStandardMaterial color={PALM_T} roughness={0.95} />
-        {data.palms.map((p, i) => (
-          <Instance key={`p_trunk_${i}`} position={[p.x, p.h / 2, p.z]} scale={[1, p.h, 1]} />
-        ))}
-      </Instances>
-      <Instances range={data.palms.length * 7} castShadow receiveShadow>
-        <boxGeometry args={[0.1, 0.04, 2.6]} />
-        <meshStandardMaterial color={PALM_F} roughness={0.82} />
-        {data.palms.flatMap((p, i) => {
-          return Array.from({ length: 7 }, (_, j) => {
-            const a = (j / 7) * Math.PI * 2;
-            const px = p.x + Math.cos(a) * 0.4;
-            const pz = p.z + Math.sin(a) * 0.4;
-            return <Instance key={`p_leaf_${i}_${j}`} position={[px, p.h + 0.25, pz]} rotation={[Math.PI / 4, 0, a]} />;
-          });
-        })}
-      </Instances>
 
       {/* ── Instanced Shrubs ── */}
       <Instances range={data.shrubs.length} castShadow receiveShadow>

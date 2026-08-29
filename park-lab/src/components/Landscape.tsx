@@ -316,10 +316,6 @@ export default function Landscape() {
 
   return (
     <group>
-      {northTrees}
-      {southTrees}
-      {westTrees}
-      {eastTrees}
       {monumentDecor}
       {waterDecor}
       {pathFlowers}
