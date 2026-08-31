@@ -249,7 +249,7 @@ export default function Scene() {
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
       <Canvas
         shadows={!isMobile} // Disable expensive shadows on mobile, or keep them but optimize
-        dpr={isMobile ? [1, 1.2] : [1, 2]}
+        dpr={[1, 2]}
         camera={{ 
           position: isMobile ? [0, 560, 180] : [0, 420, 140], 
           fov: 45, 
@@ -258,8 +258,10 @@ export default function Scene() {
         }}
         gl={{
           logarithmicDepthBuffer: true,
-          antialias: !isMobile,
+          antialias: true,
           powerPreference: 'high-performance',
+          alpha: false,
+          stencil: false,
         }}
       >
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
