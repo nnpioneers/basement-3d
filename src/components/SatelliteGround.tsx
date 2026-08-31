@@ -49,6 +49,7 @@ export default function SatelliteGround({
         <mesh
           rotation={[-Math.PI / 2, 0, rotationOffset]}
           receiveShadow
+          raycast={() => null}
         >
           <planeGeometry args={[groundWidth, groundHeight]} />
           <meshBasicMaterial
@@ -62,14 +63,14 @@ export default function SatelliteGround({
         </mesh>
       ) : (
         /* Dark Blueprint Ground */
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
           <planeGeometry args={[4000, 4000]} />
           <meshStandardMaterial color="#1a1c1e" roughness={1.0} metalness={0.0} />
         </mesh>
       )}
 
       {/* Infinite ambient background ground with clear vertical separation */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.0, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.0, 0]} raycast={() => null}>
         <planeGeometry args={[8000, 8000]} />
         <meshBasicMaterial color="#14181b" depthWrite={false} />
       </mesh>

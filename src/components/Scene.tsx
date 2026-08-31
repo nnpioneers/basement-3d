@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, Environment, ContactShadows, Bvh } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows, Bvh, PerformanceMonitor } from '@react-three/drei';
 import { useState, useEffect, useRef } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
@@ -46,7 +46,7 @@ function CameraManager({
   resetHeadingTrigger,
   is3D,
 }: CameraManagerProps) {
-  const { camera, controls } = useThree();
+  const { camera, controls, invalidate } = useThree();
   const [animatingTo, setAnimatingTo] = useState<[number, number, number] | null>(null);
   const [resettingView, setResettingView] = useState(false);
   const [resettingHeading, setResettingHeading] = useState(false);
@@ -99,6 +99,8 @@ function CameraManager({
   useFrame((_state, delta) => {
     if (!controls) return;
 
+    let needsUpdate = false;
+
     // Fast direct DOM update for compass rotation (zero React churn)
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
@@ -119,6 +121,7 @@ function CameraManager({
         camera.position.x = (controls as any).target.x + dist * Math.sin(polar) * Math.sin(nextAzimuth);
         camera.position.z = (controls as any).target.z + dist * Math.sin(polar) * Math.cos(nextAzimuth);
         (controls as any).update();
+        needsUpdate = true;
       } else {
         setResettingHeading(false);
       }
@@ -138,12 +141,12 @@ function CameraManager({
       (controls as any).target.lerp(targetVec, delta * 4);
       camera.position.lerp(defaultCamPos, delta * 4);
       (controls as any).update();
+      needsUpdate = true;
 
       if (targetDist < 1.0 && camDist < 2.0) {
         setResettingView(false);
         (controls as any).enabled = true;
       }
-      return;
     }
 
     // Smooth camera transition for 2D/3D toggle (maintains current target)
@@ -160,12 +163,12 @@ function CameraManager({
       (controls as any).enabled = false;
       camera.position.lerp(targetCamPos, delta * 5);
       (controls as any).update();
+      needsUpdate = true;
 
       if (camDist < 2.0) {
         setTogglingMode(false);
         (controls as any).enabled = true;
       }
-      return;
     }
 
     // Smooth animation to selected plot
@@ -183,11 +186,14 @@ function CameraManager({
         const camPos = new THREE.Vector3(animatingTo[0], animatingTo[1] + camOffsetY, animatingTo[2] + camOffsetZ);
         camera.position.lerp(camPos, delta * 5);
         (controls as any).update();
+        needsUpdate = true;
       } else {
         setAnimatingTo(null);
         (controls as any).enabled = true;
       }
     }
+
+    if (needsUpdate) invalidate();
   });
 
   return null;
@@ -201,6 +207,7 @@ export default function Scene() {
   const [resetViewCount, setResetViewCount] = useState(0);
   const [resetHeadingCount, setResetHeadingCount] = useState(0);
   const [plotStatusMap, setPlotStatusMap] = useState<PlotStatusMap>({});
+  const [dpr, setDpr] = useState<[number, number]>([1, 2]);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -248,8 +255,9 @@ export default function Scene() {
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
       <Canvas
+        frameloop="demand"
         shadows={!isMobile} // Disable expensive shadows on mobile, or keep them but optimize
-        dpr={[1, 2]}
+        dpr={dpr}
         camera={{ 
           position: isMobile ? [0, 560, 180] : [0, 420, 140], 
           fov: 45, 
@@ -264,6 +272,7 @@ export default function Scene() {
           stencil: false,
         }}
       >
+        <PerformanceMonitor onIncline={() => setDpr([1, 2])} onDecline={() => setDpr([1, 1])}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
         
         <Bvh firstHitOnly>
@@ -345,6 +354,7 @@ export default function Scene() {
           is3D={is3D}
         />
         </Bvh>
+        </PerformanceMonitor>
       </Canvas>
 
       {/* Floating HUD Interface */}

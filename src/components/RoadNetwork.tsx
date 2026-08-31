@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { Text, Line } from '@react-three/drei';
+import { Text, Line, Instances, Instance } from '@react-three/drei';
 
 export default function RoadNetwork() {
   const { geometry, shape } = useMemo(() => {
@@ -204,51 +204,76 @@ export default function RoadNetwork() {
     return { geometry: geom, shape };
   }, []);
 
-  // Helper function to create dashed line segments
-  const renderDashedLine = (startX: number, startY: number, endX: number, endY: number) => {
-    const dashLength = 2.0;
-    const gapLength = 2.0;
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const totalLength = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.floor(totalLength / (dashLength + gapLength));
-    
-    const angle = Math.atan2(dy, dx);
-    const dashes = [];
+  // Helper function to collect dashed line transforms
+  const dashedLineInstances = useMemo(() => {
+    const dashes: { key: string; pos: [number, number, number]; rot: [number, number, number] }[] = [];
+    const renderDashedLine = (startX: number, startY: number, endX: number, endY: number) => {
+      const dashLength = 2.0;
+      const gapLength = 2.0;
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const totalLength = Math.sqrt(dx * dx + dy * dy);
+      const steps = Math.floor(totalLength / (dashLength + gapLength));
+      const angle = Math.atan2(dy, dx);
+      for (let i = 0; i < steps; i++) {
+        const cx = startX + Math.cos(angle) * (i * (dashLength + gapLength) + dashLength / 2);
+        const cy = startY + Math.sin(angle) * (i * (dashLength + gapLength) + dashLength / 2);
+        dashes.push({ key: `${startX}-${startY}-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, angle] });
+      }
+    };
 
-    for (let i = 0; i < steps; i++) {
-      const cx = startX + Math.cos(angle) * (i * (dashLength + gapLength) + dashLength / 2);
-      const cy = startY + Math.sin(angle) * (i * (dashLength + gapLength) + dashLength / 2);
-      dashes.push(
-        <mesh key={`${startX}-${startY}-${i}`} position={[cx, cy, 0.71]} rotation={[0, 0, angle]}>
-          <planeGeometry args={[dashLength, 0.25]} />
-          <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
-        </mesh>
-      );
+    renderDashedLine(-187.5, 21.65, -6.0, 21.65);
+    renderDashedLine(6.0, 21.65, 157.77, 21.65);
+    renderDashedLine(-220.5, -9.11, -193.5, -9.11);
+    renderDashedLine(-187.5, -51.26, -187.5, 54.0);
+    renderDashedLine(-147.0, -51.26, -147.0, 54.0);
+    renderDashedLine(-111.0, -51.26, -111.0, 54.0);
+    renderDashedLine(-75.0, -51.26, -75.0, 54.0);
+    renderDashedLine(-39.0, -51.26, -39.0, 54.0);
+    renderDashedLine(0, -51.26, 0, 15.65);
+    renderDashedLine(0, 27.65, 0, 89.5);
+    renderDashedLine(42.0, -51.26, 42.0, 54.0);
+    renderDashedLine(81.0, -51.26, 81.0, 57.0);
+    renderDashedLine(120.0, -51.26, 120.0, 57.0);
+    renderDashedLine(166.77, -51.26, 166.77, 94.64);
+
+    // Roundabout Circular Dashed Line
+    const r = 4.75;
+    const circ = 2 * Math.PI * r;
+    const dashL = 1.5;
+    const gapL = 1.5;
+    const steps = Math.floor(circ / (dashL + gapL));
+    const angleStep = (Math.PI * 2) / steps;
+    for(let i=0; i<steps; i++) {
+      const angle = i * angleStep;
+      const cx = Math.cos(angle) * r;
+      const cy = Math.sin(angle) * r + 21.65;
+      const tangent = angle + Math.PI / 2;
+      dashes.push({ key: `roundabout-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, tangent] });
     }
+
     return dashes;
-  };
+  }, []);
 
-  // Helper function to create zebra crossings
-  const renderZebraCrossing = (x: number, y: number, roadWidth: number, length: number, rotation: number) => {
-    const numStripes = Math.floor(roadWidth / 1.0);
-    const stripes = [];
-    const stripeWidth = 0.5;
-    
-    for (let i = 0; i < numStripes; i++) {
-      const offset = (i - numStripes / 2 + 0.5) * 1.0;
-      const cx = x + Math.cos(rotation + Math.PI/2) * offset;
-      const cy = y + Math.sin(rotation + Math.PI/2) * offset;
-      
-      stripes.push(
-        <mesh key={`zebra-${x}-${y}-${i}`} position={[cx, cy, 0.71]} rotation={[0, 0, rotation]}>
-          <planeGeometry args={[length, stripeWidth]} />
-          <meshBasicMaterial color="#ffffff" opacity={0.8} transparent />
-        </mesh>
-      );
-    }
+  // Helper function to collect zebra crossing transforms
+  const zebraInstances = useMemo(() => {
+    const stripes: { key: string; pos: [number, number, number]; rot: [number, number, number] }[] = [];
+    const renderZebraCrossing = (x: number, y: number, roadWidth: number, length: number, rotation: number) => {
+      const numStripes = Math.floor(roadWidth / 1.0);
+      for (let i = 0; i < numStripes; i++) {
+        const offset = (i - numStripes / 2 + 0.5) * 1.0;
+        const cx = x + Math.cos(rotation + Math.PI/2) * offset;
+        const cy = y + Math.sin(rotation + Math.PI/2) * offset;
+        stripes.push({ key: `zebra-${x}-${y}-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, rotation] });
+      }
+    };
+
+    renderZebraCrossing(-8.5, 21.65, 12.0, 3.0, 0);
+    renderZebraCrossing(8.5, 21.65, 12.0, 3.0, 0);
+    renderZebraCrossing(0, 30.15, 12.0, 3.0, Math.PI / 2);
+    renderZebraCrossing(0, 13.15, 12.0, 3.0, Math.PI / 2);
     return stripes;
-  };
+  }, []);
 
   // Extract boundary and holes for continuous edge lines
   const { shapeLines, holeLines } = useMemo(() => {
@@ -266,7 +291,7 @@ export default function RoadNetwork() {
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
-      <mesh geometry={geometry} receiveShadow castShadow>
+      <mesh geometry={geometry} receiveShadow castShadow={false} raycast={() => null}>
         <meshStandardMaterial 
           attach="material-0" 
           color="#2a2b30" // Realistic dark asphalt color
@@ -282,71 +307,28 @@ export default function RoadNetwork() {
       </mesh>
 
       {/* Solid Continuous Edge Lines (Road Borders) */}
-      <Line points={shapeLines} color="#ffffff" lineWidth={1.5} opacity={0.8} transparent />
+      <Line points={shapeLines} color="#ffffff" lineWidth={1.5} opacity={0.8} transparent raycast={() => null} />
       {holeLines.map((pts, i) => (
-        <Line key={`hole-${i}`} points={pts} color="#ffffff" lineWidth={1.5} opacity={0.8} transparent />
+        <Line key={`hole-${i}`} points={pts} color="#ffffff" lineWidth={1.5} opacity={0.8} transparent raycast={() => null} />
       ))}
 
-      {/* Road Markings - Main Horizontal Road */}
-      {renderDashedLine(-187.5, 21.65, -6.0, 21.65)}
-      {renderDashedLine(6.0, 21.65, 157.77, 21.65)}
+      {/* Road Markings - Instanced Dashed Lines */}
+      <Instances limit={dashedLineInstances.length} raycast={() => null}>
+        <planeGeometry args={[2.0, 0.25]} />
+        <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
+        {dashedLineInstances.map(d => (
+          <Instance key={d.key} position={d.pos} rotation={d.rot} />
+        ))}
+      </Instances>
 
-      {/* Road Markings - Far-Left Horizontal Road (9.0m) */}
-      {renderDashedLine(-220.5, -9.11, -193.5, -9.11)}
-
-      {/* Road Markings - Left 12.0m Vertical Road */}
-      {renderDashedLine(-187.5, -51.26, -187.5, 54.0)}
-
-      {/* Road Markings - 9.0m Vertical Roads (Left side) */}
-      {renderDashedLine(-147.0, -51.26, -147.0, 54.0)}
-      {renderDashedLine(-111.0, -51.26, -111.0, 54.0)}
-      {renderDashedLine(-75.0, -51.26, -75.0, 54.0)}
-      {renderDashedLine(-39.0, -51.26, -39.0, 54.0)}
-
-      {/* Road Markings - Center 12.0m Vertical Road */}
-      {renderDashedLine(0, -51.26, 0, 15.65)}
-      {renderDashedLine(0, 27.65, 0, 89.5)}
-
-      {/* Road Markings - 9.0m Vertical Roads (Right side) */}
-      {renderDashedLine(42.0, -51.26, 42.0, 54.0)}
-      {renderDashedLine(81.0, -51.26, 81.0, 57.0)}
-      {renderDashedLine(120.0, -51.26, 120.0, 57.0)}
-
-      {/* Road Markings - Right 18.0m Vertical Road */}
-      {renderDashedLine(166.77, -51.26, 166.77, 94.64)}
-
-      {/* Zebra Crossings around Roundabout */}
-      {renderZebraCrossing(-8.5, 21.65, 12.0, 3.0, 0)}
-      {renderZebraCrossing(8.5, 21.65, 12.0, 3.0, 0)}
-      {renderZebraCrossing(0, 30.15, 12.0, 3.0, Math.PI / 2)}
-      {renderZebraCrossing(0, 13.15, 12.0, 3.0, Math.PI / 2)}
-
-      {/* Roundabout Circular Dashed Line */}
-      {(() => {
-        // Radius of circular path (between island r=3.5 and outer boundary r=6.0)
-        const r = 4.75;
-        const circ = 2 * Math.PI * r;
-        const dashL = 1.5;
-        const gapL = 1.5;
-        const steps = Math.floor(circ / (dashL + gapL));
-        const angleStep = (Math.PI * 2) / steps;
-        
-        const circleDashes = [];
-        for(let i=0; i<steps; i++) {
-          const angle = i * angleStep;
-          const cx = Math.cos(angle) * r;
-          const cy = Math.sin(angle) * r + 21.65;
-          // Tangent angle is angle + 90 degrees
-          const tangent = angle + Math.PI / 2;
-          circleDashes.push(
-            <mesh key={`roundabout-${i}`} position={[cx, cy, 0.71]} rotation={[0, 0, tangent]}>
-              <planeGeometry args={[dashL, 0.25]} />
-              <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
-            </mesh>
-          );
-        }
-        return circleDashes;
-      })()}
+      {/* Road Markings - Instanced Zebra Crossings */}
+      <Instances limit={zebraInstances.length} raycast={() => null}>
+        <planeGeometry args={[3.0, 0.5]} />
+        <meshBasicMaterial color="#ffffff" opacity={0.8} transparent />
+        {zebraInstances.map(z => (
+          <Instance key={z.key} position={z.pos} rotation={z.rot} />
+        ))}
+      </Instances>
 
       {/* Road Name Labels */}
       {[
@@ -403,6 +385,7 @@ export default function RoadNetwork() {
           anchorX="center"
           anchorY="middle"
           fontWeight="bold"
+          raycast={() => null}
         >
           {label.text}
         </Text>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Text, Line } from '@react-three/drei';
 import { registerPlotPosition } from '../data/plotLookup';
@@ -49,7 +49,7 @@ function getPlotMaterial(color: string) {
   return matCache[color];
 }
 
-export default function InteractivePlot({
+const InteractivePlotComponent = ({
   plot,
   x,
   y,
@@ -63,7 +63,7 @@ export default function InteractivePlot({
   isSelected: boolean;
   onClick: (worldPos: [number, number, number]) => void;
   status?: PlotStatus;
-}) {
+}) => {
   const { geom, metrics, worldPos, linePoints } = useMemo(() => {
     const g = getPlotGeom(plot);
 
@@ -187,6 +187,7 @@ export default function InteractivePlot({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
+        raycast={() => null}
       >
         {plotNumberStr}
       </Text>
@@ -201,6 +202,7 @@ export default function InteractivePlot({
           anchorX="center"
           anchorY="middle"
           fontWeight="bold"
+          raycast={() => null}
         >
           SOLD
         </Text>
@@ -219,6 +221,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {metrics.areaSqM}
           </Text>
@@ -232,6 +235,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {metrics.areaSqFt}
           </Text>
@@ -245,6 +249,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {formatDimension(plot.frontage)}
           </Text>
@@ -258,6 +263,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {formatDimension(metrics.leftEdgeLength)}
           </Text>
@@ -271,6 +277,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {formatDimension(plot.depthB)}
           </Text>
@@ -284,6 +291,7 @@ export default function InteractivePlot({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            raycast={() => null}
           >
             {formatDimension(plot.depthT)}
           </Text>
@@ -291,4 +299,12 @@ export default function InteractivePlot({
       )}
     </group>
   );
-}
+};
+
+export default React.memo(InteractivePlotComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.status === nextProps.status &&
+    prevProps.plot.id === nextProps.plot.id
+  );
+});

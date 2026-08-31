@@ -53,7 +53,7 @@ export default function ParksAndCASite() {
       {/* =========================================================
           1. FAR-LEFT BOTTOM PARK
           ========================================================= */}
-      <mesh geometry={parkGeom} receiveShadow castShadow>
+      <mesh geometry={parkGeom} raycast={() => null}>
         <meshStandardMaterial attach="material-0" color="#2e7d32" roughness={0.85} metalness={0.05} />
         <meshStandardMaterial attach="material-1" color="#1b5e20" roughness={0.9} />
       </mesh>
@@ -72,7 +72,7 @@ export default function ParksAndCASite() {
       {/* =========================================================
           2. TOP-LEFT CA SITE
           ========================================================= */}
-      <mesh geometry={caGeom} receiveShadow castShadow>
+      <mesh geometry={caGeom} raycast={() => null}>
         <meshStandardMaterial attach="material-0" color="#d2b48c" roughness={0.8} />
         <meshStandardMaterial attach="material-1" color="#8b9dc3" roughness={0.9} />
       </mesh>
