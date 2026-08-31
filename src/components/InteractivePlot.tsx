@@ -149,12 +149,21 @@ const InteractivePlotComponent = ({
   const area1Y = metrics.centerY - (H * 0.05);
   const area2Y = metrics.centerY - (H * 0.24);
 
+  const commonTextProps = {
+    characters: '0123456789. m²ftSOLD',
+    matrixAutoUpdate: false,
+    onUpdate: (c: any) => c.updateMatrix(),
+    raycast: () => null,
+  };
+
   return (
-    <group position={[x, y, 0]}>
+    <group position={[x, y, 0]} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>
       {/* Plot Geometry Mesh */}
       <mesh
         geometry={geom}
         material={getPlotMaterial(currentColor)}
+        matrixAutoUpdate={false}
+        onUpdate={(c) => c.updateMatrix()}
         onClick={(e) => {
           e.stopPropagation();
           onClick(worldPos);
@@ -180,6 +189,7 @@ const InteractivePlotComponent = ({
 
       {/* Main Plot Number (Large Bold Black when unselected; Solid Thick Pure White when selected or sold) */}
       <Text
+        {...commonTextProps}
         position={[metrics.centerX, isSelected || (isSold && !isSelected) ? numY : metrics.centerY, 0.4]}
         rotation={[0, 0, 0]}
         fontSize={numFontSize}
@@ -187,7 +197,6 @@ const InteractivePlotComponent = ({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
-        raycast={() => null}
       >
         {plotNumberStr}
       </Text>
@@ -195,6 +204,7 @@ const InteractivePlotComponent = ({
       {/* Simple SOLD status indication when plot is sold */}
       {isSold && !isSelected && (
         <Text
+          {...commonTextProps}
           position={[metrics.centerX, area1Y, 0.4]}
           rotation={[0, 0, 0]}
           fontSize={areaM2FontSize}
@@ -202,7 +212,6 @@ const InteractivePlotComponent = ({
           anchorX="center"
           anchorY="middle"
           fontWeight="bold"
-          raycast={() => null}
         >
           SOLD
         </Text>
@@ -214,6 +223,7 @@ const InteractivePlotComponent = ({
         <group>
           {/* Area Line 1: m² */}
           <Text
+            {...commonTextProps}
             position={[metrics.centerX, area1Y, 0.4]}
             rotation={[0, 0, 0]}
             fontSize={areaM2FontSize}
@@ -221,13 +231,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {metrics.areaSqM}
           </Text>
 
           {/* Area Line 2: ft² */}
           <Text
+            {...commonTextProps}
             position={[metrics.centerX, area2Y, 0.4]}
             rotation={[0, 0, 0]}
             fontSize={areaFt2FontSize}
@@ -235,13 +245,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {metrics.areaSqFt}
           </Text>
 
           {/* Right Edge Dimension (Frontage / East edge) */}
           <Text
+            {...commonTextProps}
             position={[-edgeMargin, metrics.centerY, 0.42]}
             rotation={[0, 0, Math.PI / 2]}
             fontSize={dimFontSize}
@@ -249,13 +259,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {formatDimension(plot.frontage)}
           </Text>
 
           {/* Left Edge Dimension (Back Boundary / West edge) */}
           <Text
+            {...commonTextProps}
             position={[-(plot.depthB + plot.depthT) / 2 + edgeMargin, metrics.centerY, 0.42]}
             rotation={[0, 0, metrics.leftEdgeAngle]}
             fontSize={dimFontSize}
@@ -263,13 +273,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {formatDimension(metrics.leftEdgeLength)}
           </Text>
 
           {/* Bottom Edge Dimension (South edge) */}
           <Text
+            {...commonTextProps}
             position={[-plot.depthB / 2, edgeMargin, 0.42]}
             rotation={[0, 0, 0]}
             fontSize={dimFontSize}
@@ -277,13 +287,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {formatDimension(plot.depthB)}
           </Text>
 
           {/* Top Edge Dimension (North edge) */}
           <Text
+            {...commonTextProps}
             position={[-plot.depthT / 2, H - edgeMargin, 0.42]}
             rotation={[0, 0, 0]}
             fontSize={dimFontSize}
@@ -291,7 +301,6 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            raycast={() => null}
           >
             {formatDimension(plot.depthT)}
           </Text>

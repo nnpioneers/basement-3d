@@ -33,7 +33,7 @@ function StoneRing({ r = 1.1 }: { r?: number }) {
 
 function FireFlame() {
   return (
-    <group position={[0, 0.28, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[0, 0.28, 0]}>
       {/* Logs cross */}
       <mesh position={[0, 0.08, 0]} rotation={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[0.1, 0.12, 1.2, 7]} />
@@ -86,7 +86,7 @@ export default function CampfireArea({ cx, cz }: FireAreaProps) {
   }, []);
 
   return (
-    <group position={[cx, 0, cz]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[cx, 0, cz]}>
       {/* Inner sand closer to fire */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} receiveShadow>
         <circleGeometry args={[2.0, 24]} />

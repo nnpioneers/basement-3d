@@ -10,7 +10,7 @@ function MonkeyBars({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   const d = 1.0;
   const h = 2.4;
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* 4 Posts */}
       {[[-w/2, -d/2], [w/2, -d/2], [-w/2, d/2], [w/2, d/2]].map(([px, pz], i) => (
         <mesh key={i} position={[px, h/2, pz]} castShadow>
@@ -60,7 +60,7 @@ function MonkeyBars({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
 
 function AirWalker({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Central Post */}
       <mesh position={[0, 0.6, 0]} castShadow>
         <cylinderGeometry args={[0.08, 0.08, 1.2, 8]} />
@@ -74,7 +74,7 @@ function AirWalker({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
       
       {/* Left/Right Swinging Arms */}
       {[-0.25, 0.25].map((ox, i) => (
-        <group key={`aw-${i}`} position={[ox, 1.2, 0]} rotation={[i === 0 ? 0.2 : -0.2, 0, 0]}>
+        <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} key={`aw-${i}`} position={[ox, 1.2, 0]} rotation={[i === 0 ? 0.2 : -0.2, 0, 0]}>
           {/* Arm going down */}
           <mesh position={[0, -0.6, 0]} castShadow>
             <cylinderGeometry args={[0.03, 0.03, 1.3, 8]} />
@@ -98,7 +98,7 @@ function AirWalker({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
 
 function ChestPress({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Base frame */}
       <mesh position={[0, 0.05, 0]} castShadow>
         <boxGeometry args={[0.5, 0.1, 0.8]} />
@@ -122,7 +122,7 @@ function ChestPress({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
       
       {/* Press arms */}
       {[-0.35, 0.35].map((ox, i) => (
-        <group key={`cp-${i}`} position={[0, 1.1, -0.15]}>
+        <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} key={`cp-${i}`} position={[0, 1.1, -0.15]}>
           <mesh position={[ox, 0, 0.3]} rotation={[0.2, 0, 0]} castShadow>
              <boxGeometry args={[0.04, 0.5, 0.04]} />
              <meshStandardMaterial color={BLACK} roughness={0.7} metalness={0.2} />
@@ -139,7 +139,7 @@ function ChestPress({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
 
 function SitUpBench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Main curved board */}
       <mesh position={[0, 0.4, 0]} rotation={[0.25, 0, 0]} castShadow>
         <boxGeometry args={[0.45, 0.08, 1.4]} />
@@ -168,7 +168,7 @@ function SitUpBench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
 
 function InstructionBoard({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Posts */}
       {[-0.4, 0.4].map((ox, i) => (
         <mesh key={`post-${i}`} position={[ox, 0.7, 0]} castShadow>
@@ -193,7 +193,7 @@ function InstructionBoard({ x, z, ry = 0 }: { x: number; z: number; ry?: number 
 export default function GymArea() {
   const { gymCX: cx, gymCZ: cz, gymRadius: r } = C;
   return (
-    <group position={[cx, 0, cz]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[cx, 0, cz]}>
       {/* Rubber flooring (flush with ground paths y=0.07) */}
       <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0.07, 0]} receiveShadow>
         <circleGeometry args={[r, 48]} />

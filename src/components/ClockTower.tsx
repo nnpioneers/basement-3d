@@ -21,29 +21,29 @@ export default function ClockTower() {
   });
 
   return (
-    <group position={[0, 0, 0]} scale={[2.4, 1.6, 2.4]}>
+    <group position={[0, 0, 0]} scale={[2.4, 1.6, 2.4]} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
       {/* Base Pedestal (Tier 1) */}
-      <mesh position={[0, 0.4, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 0.4, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[2.5, 0.8, 2.5]} />
       </mesh>
       
       {/* Base Pedestal (Tier 2) */}
-      <mesh position={[0, 1.0, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 1.0, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[2.0, 0.4, 2.0]} />
       </mesh>
 
       {/* Main Shaft */}
-      <mesh position={[0, 6.2, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 6.2, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[1.4, 10.0, 1.4]} />
       </mesh>
 
       {/* Sub-cap (below clocks) */}
-      <mesh position={[0, 11.4, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 11.4, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[1.6, 0.4, 1.6]} />
       </mesh>
 
       {/* Clock Section */}
-      <mesh position={[0, 12.6, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 12.6, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[1.5, 2.0, 1.5]} />
       </mesh>
 
@@ -54,35 +54,35 @@ export default function ClockTower() {
         { pos: [0.76, 12.6, 0], rot: [0, 0, -Math.PI / 2] },    // Right
         { pos: [-0.76, 12.6, 0], rot: [0, 0, Math.PI / 2] },    // Left
       ].map((face, index) => (
-        <group key={index} position={new THREE.Vector3(...face.pos)} rotation={new THREE.Euler(...face.rot)}>
+        <group key={index} position={new THREE.Vector3(...face.pos)} rotation={new THREE.Euler(...face.rot)} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
           {/* Dial */}
-          <mesh receiveShadow castShadow material={clockFaceMaterial}>
+          <mesh material={clockFaceMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
             <cylinderGeometry args={[0.6, 0.6, 0.05, 32]} />
           </mesh>
           {/* Minute Hand */}
-          <mesh position={[0, 0.04, 0]} rotation={[0, 0, Math.PI / 4]} receiveShadow castShadow material={clockHandMaterial}>
+          <mesh position={[0, 0.04, 0]} rotation={[0, 0, Math.PI / 4]} material={clockHandMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
             <boxGeometry args={[0.04, 0.02, 0.45]} />
           </mesh>
           {/* Hour Hand */}
-          <mesh position={[0, 0.03, 0]} rotation={[0, 0, -Math.PI / 6]} receiveShadow castShadow material={clockHandMaterial}>
+          <mesh position={[0, 0.03, 0]} rotation={[0, 0, -Math.PI / 6]} material={clockHandMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
             <boxGeometry args={[0.06, 0.02, 0.3]} />
           </mesh>
         </group>
       ))}
 
       {/* Top Cap */}
-      <mesh position={[0, 13.7, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 13.7, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <boxGeometry args={[1.6, 0.2, 1.6]} />
       </mesh>
 
       {/* Crown Pyramid */}
-      <mesh position={[0, 14.8, 0]} receiveShadow castShadow material={stoneMaterial}>
+      <mesh position={[0, 14.8, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         {/* Radius, height, radial segments */}
         <cylinderGeometry args={[0, 1.1, 2.0, 4]} />
       </mesh>
       
       {/* Finial/Spire */}
-      <mesh position={[0, 16.2, 0]} receiveShadow castShadow material={clockHandMaterial}>
+      <mesh position={[0, 16.2, 0]} material={clockHandMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
         <cylinderGeometry args={[0.02, 0.05, 0.8, 8]} />
       </mesh>
     </group>

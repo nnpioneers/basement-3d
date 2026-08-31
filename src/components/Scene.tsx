@@ -199,6 +199,14 @@ function CameraManager({
   return null;
 }
 
+function WebGLProfiler() {
+  const { gl } = useThree();
+  useFrame(() => {
+    console.log(`WEBGL_PROFILE: Calls: ${gl.info.render.calls} Triangles: ${gl.info.render.triangles} Geometries: ${gl.info.memory.geometries} Textures: ${gl.info.memory.textures} Programs: ${gl.info.programs?.length || 0}`);
+  });
+  return null;
+}
+
 export default function Scene() {
   const [is3D, setIs3D] = useState(true);
   const [mapType, setMapType] = useState<'satellite' | 'dark'>('satellite');
@@ -210,6 +218,14 @@ export default function Scene() {
   const [dpr, setDpr] = useState<[number, number]>([1, 2]);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  useEffect(() => {
+    // Force continuous render for profiling
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event('mousemove'));
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function loadPlotStatuses() {
@@ -272,6 +288,7 @@ export default function Scene() {
           stencil: false,
         }}
       >
+        <WebGLProfiler />
         <PerformanceMonitor onIncline={() => setDpr([1, 2])} onDecline={() => setDpr([1, 1])}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
         

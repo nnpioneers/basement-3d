@@ -38,13 +38,13 @@ export default function EntranceGate() {
 
   return (
     // Positioned at the bottom entrance of the 12m vertical road next to Plot 16 (x = -187.5, z = 50.0)
-    <group position={[-187.5, 0, 50.0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[-187.5, 0, 50.0]}>
       
       {/* ================= 1. VOLUMETRIC BLUE LIGHT RUNWAY (ADDITIVE GLOW LAYERS) ================= */}
       {/* Starts exactly at the road start (z = 51.26) and extends 11.0m up the road (z = 40.26) */}
       {/* Center of the 11.0m box is at z = 45.76 (which is -4.24m relative to the gate at z = 50.0) */}
       {/* Using only transparent MeshBasicMaterial with AdditiveBlending and rotated [-Math.PI / 2, 0, 0] to lie flat on the road */}
-      <group position={[0, 0.725, -4.24]}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[0, 0.725, -4.24]}>
         
         {/* Layer 1: Core Bright Ray */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow={false} receiveShadow={true}>
@@ -102,7 +102,7 @@ export default function EntranceGate() {
       {/* ================= 2. LIGHT PROJECTORS & VOLUMETRIC BEAMS ================= */}
       
       {/* LEFT PROJECTOR & RAY */}
-      <group position={[-5.4, 6.8, 0]}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[-5.4, 6.8, 0]}>
         {/* Projector housing cylinder */}
         <mesh rotation={[0, 0, -0.463]} material={projectorMaterial}>
           <cylinderGeometry args={[0.2, 0.25, 0.6, 16]} />
@@ -133,7 +133,7 @@ export default function EntranceGate() {
       </mesh>
 
       {/* RIGHT PROJECTOR & RAY */}
-      <group position={[5.4, 6.8, 0]}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[5.4, 6.8, 0]}>
         {/* Projector housing cylinder */}
         <mesh rotation={[0, 0, 0.463]} material={projectorMaterial}>
           <cylinderGeometry args={[0.2, 0.25, 0.6, 16]} />
@@ -166,7 +166,7 @@ export default function EntranceGate() {
       {/* ================= 3. GATE ARCH STRUCTURE ================= */}
 
       {/* LEFT PILLAR */}
-      <group position={[-6.0, 0, 0]}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[-6.0, 0, 0]}>
         {/* Main Column */}
         <mesh position={[0, 3.5, 0]} castShadow receiveShadow material={pillarMaterial}>
           <boxGeometry args={[1.2, 7.0, 1.2]} />
@@ -182,7 +182,7 @@ export default function EntranceGate() {
       </group>
 
       {/* RIGHT PILLAR */}
-      <group position={[6.0, 0, 0]}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[6.0, 0, 0]}>
         {/* Main Column */}
         <mesh position={[0, 3.5, 0]} castShadow receiveShadow material={pillarMaterial}>
           <boxGeometry args={[1.2, 7.0, 1.2]} />
@@ -192,14 +192,22 @@ export default function EntranceGate() {
           <boxGeometry args={[1.6, 0.8, 1.6]} />
         </mesh>
         {/* Modern Vertical LED Light Strip */}
-        <mesh position={[-0.61, 3.5, 0]} material={ledLightMaterial}>
+        <mesh position={[0, 3.5, 0]} material={pillarMaterial} matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()}>
+          <boxGeometry args={[1.2, 7.0, 1.2]} />
+        </mesh>
+        {/* Base */}
+        <mesh position={[0, 0.4, 0]} material={pillarMaterial} matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()}>
+          <boxGeometry args={[1.6, 0.8, 1.6]} />
+        </mesh>
+        {/* Modern Vertical LED Light Strip */}
+        <mesh position={[-0.61, 3.5, 0]} material={ledLightMaterial} matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()}>
           <boxGeometry args={[0.05, 5.0, 0.2]} />
         </mesh>
       </group>
 
       {/* TOP ARCH CROSSBAR */}
-      <group position={[0, 7.3, 0]}>
-        <mesh castShadow receiveShadow material={archMaterial}>
+      <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[0, 7.3, 0]}>
+        <mesh material={archMaterial} matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()}>
           <boxGeometry args={[13.2, 0.8, 1.6]} />
         </mesh>
 

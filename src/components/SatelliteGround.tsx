@@ -43,13 +43,14 @@ export default function SatelliteGround({
   const groundHeight = 1254.2 * scaleY;
 
   return (
-    <group position={[positionOffset[0], -0.65 + positionOffset[1], positionOffset[2]]}>
+    <group position={[positionOffset[0], -0.65 + positionOffset[1], positionOffset[2]]} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>
       {/* Real Ultra-High-Resolution Google Satellite Aerial Terrain */}
       {mapType !== 'dark' && texture ? (
         <mesh
           rotation={[-Math.PI / 2, 0, rotationOffset]}
           receiveShadow
           raycast={() => null}
+          matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}
         >
           <planeGeometry args={[groundWidth, groundHeight]} />
           <meshBasicMaterial
@@ -63,14 +64,14 @@ export default function SatelliteGround({
         </mesh>
       ) : (
         /* Dark Blueprint Ground */
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>
           <planeGeometry args={[4000, 4000]} />
           <meshStandardMaterial color="#1a1c1e" roughness={1.0} metalness={0.0} />
         </mesh>
       )}
 
       {/* Infinite ambient background ground with clear vertical separation */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.0, 0]} raycast={() => null}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.0, 0]} raycast={() => null} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>
         <planeGeometry args={[8000, 8000]} />
         <meshBasicMaterial color="#14181b" depthWrite={false} />
       </mesh>

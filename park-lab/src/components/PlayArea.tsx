@@ -13,7 +13,7 @@ function PlayStructure({ x, z }: { x: number; z: number }) {
   const platH = 2.2;  // platform height
 
   return (
-    <group position={[x, 0, z]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]}>
       {/* 4 corner support legs */}
       {[[-0.7,-0.7],[0.7,-0.7],[-0.7,0.7],[0.7,0.7]].map(([ox,oz],i) => (
         <mesh key={i} position={[ox, platH/2, oz]} castShadow>
@@ -97,7 +97,7 @@ function SwingSet({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   const chainH  = 2.5; // length of chain
 
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Left A-frame — two angled posts */}
       <mesh position={[-frameW/2 - 0.2, frameH/2, -0.35]}
         rotation={[0, 0,  0.18]} castShadow>
@@ -165,7 +165,7 @@ function SwingSet({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
 // ── See-saw ────────────────────────────────────────────────
 function SeeSaw({ x, z }: { x: number; z: number }) {
   return (
-    <group position={[x, 0, z]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[x, 0, z]}>
       {/* Fulcrum */}
       <mesh position={[0, 0.35, 0]} castShadow>
         <cylinderGeometry args={[0.12, 0.16, 0.7, 8]} />
@@ -192,7 +192,7 @@ export default function PlayArea() {
   const { playCX: cx, playCZ: cz, playRadius: r } = C;
 
   return (
-    <group position={[cx, 0, cz]}>
+    <group matrixAutoUpdate={false} onUpdate={(c: any) => c.updateMatrix()} position={[cx, 0, cz]}>
       {/* Orange rubber flooring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]} receiveShadow>
         <circleGeometry args={[r, 40]} />
