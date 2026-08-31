@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows, Bvh } from '@react-three/drei';
 import { useState, useEffect, useRef } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
@@ -266,6 +266,7 @@ export default function Scene() {
       >
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
         
+        <Bvh firstHitOnly>
         {/* Architectural lighting balanced for satellite terrain */}
         <ambientLight intensity={mapType === 'satellite' ? 0.65 : 0.4} />
         <directionalLight 
@@ -343,6 +344,7 @@ export default function Scene() {
           resetHeadingTrigger={resetHeadingCount}
           is3D={is3D}
         />
+        </Bvh>
       </Canvas>
 
       {/* Floating HUD Interface */}

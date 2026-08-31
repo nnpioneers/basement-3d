@@ -41,10 +41,10 @@ function getPlotGeom(plot: PlotSpec) {
   return geomCache.get(key)!;
 }
 
-const matCache: Record<string, { color: string, roughness: number, metalness: number }> = {};
+const matCache: Record<string, THREE.MeshStandardMaterial> = {};
 function getPlotMaterial(color: string) {
   if (!matCache[color]) {
-    matCache[color] = { color, roughness: 0.8, metalness: 0.0 };
+    matCache[color] = new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0.0 });
   }
   return matCache[color];
 }
@@ -154,8 +154,7 @@ export default function InteractivePlot({
       {/* Plot Geometry Mesh */}
       <mesh
         geometry={geom}
-        receiveShadow
-        castShadow
+        material={getPlotMaterial(currentColor)}
         onClick={(e) => {
           e.stopPropagation();
           onClick(worldPos);
@@ -171,9 +170,6 @@ export default function InteractivePlot({
           document.body.style.cursor = 'auto';
         }}
       >
-        <meshStandardMaterial 
-          {...getPlotMaterial(currentColor)}
-        />
         {/* Crisp Deep Black Border around the plot */}
         <Line 
           points={linePoints} 
