@@ -226,7 +226,7 @@ export default function Scene() {
   const [resetViewCount, setResetViewCount] = useState(0);
   const [resetHeadingCount, setResetHeadingCount] = useState(0);
   const [plotStatusMap, setPlotStatusMap] = useState<PlotStatusMap>({});
-  const [dpr, setDpr] = useState<[number, number]>([1, 2]);
+  const [, setDpr] = useState<[number, number]>([1, 2]);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 

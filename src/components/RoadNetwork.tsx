@@ -258,7 +258,7 @@ export default function RoadNetwork() {
   // Helper function to collect zebra crossing transforms
   const zebraInstances = useMemo(() => {
     const stripes: { key: string; pos: [number, number, number]; rot: [number, number, number] }[] = [];
-    const renderZebraCrossing = (x: number, y: number, roadWidth: number, length: number, rotation: number) => {
+    const renderZebraCrossing = (x: number, y: number, roadWidth: number, _length: number, rotation: number) => {
       const numStripes = Math.floor(roadWidth / 1.0);
       for (let i = 0; i < numStripes; i++) {
         const offset = (i - numStripes / 2 + 0.5) * 1.0;
