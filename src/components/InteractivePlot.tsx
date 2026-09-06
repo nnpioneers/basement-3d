@@ -68,7 +68,7 @@ const InteractivePlotComponent = ({
   x: number;
   y: number;
   isSelected: boolean;
-  onClick: (worldPos: [number, number, number]) => void;
+  onClick: (id: number, worldPos: [number, number, number]) => void;
   status?: PlotStatus;
 }) => {
   const { geom, metrics, worldPos, linePoints } = useMemo(() => {
@@ -165,7 +165,7 @@ const InteractivePlotComponent = ({
         onUpdate={(c) => c.updateMatrix()}
         onClick={(e) => {
           e.stopPropagation();
-          onClick(worldPos);
+          onClick(plot.id, worldPos);
         }}
         onPointerOver={(e) => {
           e.stopPropagation();

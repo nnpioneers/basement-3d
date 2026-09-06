@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows, Bvh, PerformanceMonitor } from '@react-three/drei';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
 import PlotsCenterLeft from './PlotsCenterLeft';
@@ -33,16 +33,17 @@ import { getPlotPosition } from '../data/plotLookup';
 import { isSupabaseConfigured, fetchPlotStatuses, subscribeToPlotChanges } from '../services/supabase';
 import type { PlotStatusMap } from '../types/plot';
 
+// Module-level reusable vectors — never reallocated
+const tmpForward = new THREE.Vector3();
+const tmpTarget = new THREE.Vector3();
+const tmpCamPos = new THREE.Vector3();
+
 interface CameraManagerProps {
   targetPos: [number, number, number] | null;
   resetViewTrigger: number;
   resetHeadingTrigger: number;
   is3D: boolean;
 }
-
-const tmpForward = new THREE.Vector3();
-const tmpTarget = new THREE.Vector3();
-const tmpCamPos = new THREE.Vector3();
 
 function CameraManager({
   targetPos,
@@ -51,32 +52,67 @@ function CameraManager({
   is3D,
 }: CameraManagerProps) {
   const { camera, controls, invalidate } = useThree();
-  const [animatingTo, setAnimatingTo] = useState<[number, number, number] | null>(null);
-  const [resettingView, setResettingView] = useState(false);
-  const [resettingHeading, setResettingHeading] = useState(false);
-  const [togglingMode, setTogglingMode] = useState(false);
+
+  // All animation state as refs — zero React re-renders during animation
+  const animatingToRef = useRef<[number, number, number] | null>(null);
+  const resettingViewRef = useRef(false);
+  const resettingHeadingRef = useRef(false);
+  const togglingModeRef = useRef(false);
+  const is3DRef = useRef(is3D);
   const is3DPrevRef = useRef(is3D);
 
+  // Cache mobile check — only recalculated on resize, not every frame
+  const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => {
+      isMobileRef.current = window.innerWidth < 768;
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Sync is3D into ref
+  useEffect(() => {
+    is3DRef.current = is3D;
+  }, [is3D]);
+
+  // React to targetPos changes — write to ref, no setState
   useEffect(() => {
     if (targetPos) {
-      setAnimatingTo(targetPos);
-      setResettingView(false);
+      animatingToRef.current = targetPos;
+      resettingViewRef.current = false;
+      invalidate();
     }
-  }, [targetPos]);
+  }, [targetPos, invalidate]);
 
+  // React to reset view trigger — write to ref
   useEffect(() => {
     if (resetViewTrigger > 0) {
-      setResettingView(true);
-      setAnimatingTo(null);
+      resettingViewRef.current = true;
+      animatingToRef.current = null;
+      invalidate();
     }
-  }, [resetViewTrigger]);
+  }, [resetViewTrigger, invalidate]);
 
+  // React to reset heading trigger — write to ref
   useEffect(() => {
     if (resetHeadingTrigger > 0) {
-      setResettingHeading(true);
+      resettingHeadingRef.current = true;
+      invalidate();
     }
-  }, [resetHeadingTrigger]);
+  }, [resetHeadingTrigger, invalidate]);
 
+  // React to 2D/3D mode toggle — write to ref
+  useEffect(() => {
+    if (is3DPrevRef.current !== is3D) {
+      is3DPrevRef.current = is3D;
+      togglingModeRef.current = true;
+      invalidate();
+    }
+  }, [is3D, invalidate]);
+
+  // Apply OrbitControls touch/mouse config when mode changes
   useEffect(() => {
     if (controls) {
       if (is3D) {
@@ -93,29 +129,21 @@ function CameraManager({
     }
   }, [controls, is3D]);
 
-  useEffect(() => {
-    if (is3DPrevRef.current !== is3D) {
-      is3DPrevRef.current = is3D;
-      setTogglingMode(true);
-    }
-  }, [is3D]);
-
   useFrame((_state, delta) => {
     if (!controls) return;
 
     let needsUpdate = false;
 
-    // Fast direct DOM update for compass rotation (zero React churn)
+    // Fast direct DOM update for compass rotation — zero React churn
     camera.getWorldDirection(tmpForward);
     const heading = Math.atan2(tmpForward.x, tmpForward.z);
     const needle = document.getElementById('compass-needle');
     if (needle) {
-      const deg = -(heading * 180) / Math.PI;
-      needle.style.transform = `rotate(${deg}deg)`;
+      needle.style.transform = `rotate(${-(heading * 180) / Math.PI}deg)`;
     }
 
     // Reset heading towards North
-    if (resettingHeading) {
+    if (resettingHeadingRef.current) {
       const currentAzimuth = (controls as any).getAzimuthalAngle?.() || 0;
       if (Math.abs(currentAzimuth) > 0.02) {
         const nextAzimuth = THREE.MathUtils.lerp(currentAzimuth, 0, delta * 8);
@@ -126,16 +154,16 @@ function CameraManager({
         (controls as any).update();
         needsUpdate = true;
       } else {
-        setResettingHeading(false);
+        resettingHeadingRef.current = false;
       }
     }
 
-    // Smooth camera reset to view
-    if (resettingView) {
-      const isMobile = window.innerWidth < 768;
+    // Smooth camera reset to overview
+    if (resettingViewRef.current) {
+      const isMobile = isMobileRef.current;
       tmpTarget.set(0, 0, 0);
-      
-      if (is3D) {
+
+      if (is3DRef.current) {
         if (isMobile) tmpCamPos.set(0, 560, 180);
         else tmpCamPos.set(0, 420, 140);
       } else {
@@ -153,22 +181,22 @@ function CameraManager({
       needsUpdate = true;
 
       if (targetDist < 1.0 && camDist < 2.0) {
-        setResettingView(false);
+        resettingViewRef.current = false;
         (controls as any).enabled = true;
       }
     }
 
-    // Smooth camera transition for 2D/3D toggle (maintains current target)
-    if (togglingMode) {
+    // Smooth 2D/3D toggle transition
+    if (togglingModeRef.current) {
       tmpTarget.copy((controls as any).target);
       const dist = Math.max(80, camera.position.distanceTo(tmpTarget));
-      
-      if (is3D) {
+
+      if (is3DRef.current) {
         tmpCamPos.set(tmpTarget.x, tmpTarget.y + dist * 0.6, tmpTarget.z + dist * 0.8);
       } else {
         tmpCamPos.set(tmpTarget.x, tmpTarget.y + dist, tmpTarget.z + 0.1);
       }
-        
+
       const camDist = camera.position.distanceTo(tmpCamPos);
 
       (controls as any).enabled = false;
@@ -177,29 +205,30 @@ function CameraManager({
       needsUpdate = true;
 
       if (camDist < 2.0) {
-        setTogglingMode(false);
+        togglingModeRef.current = false;
         (controls as any).enabled = true;
       }
     }
 
-    // Smooth animation to selected plot
-    if (animatingTo) {
-      tmpTarget.set(...animatingTo);
+    // Smooth fly-to selected plot
+    if (animatingToRef.current) {
+      const anim = animatingToRef.current;
+      tmpTarget.set(anim[0], anim[1], anim[2]);
       const targetDist = (controls as any).target.distanceTo(tmpTarget);
 
       (controls as any).enabled = false;
 
       if (targetDist > 0.5) {
         (controls as any).target.lerp(tmpTarget, delta * 5);
-        const isMobile = window.innerWidth < 768;
+        const isMobile = isMobileRef.current;
         const camOffsetY = isMobile ? 85 : 65;
         const camOffsetZ = isMobile ? 45 : 35;
-        tmpCamPos.set(animatingTo[0], animatingTo[1] + camOffsetY, animatingTo[2] + camOffsetZ);
+        tmpCamPos.set(anim[0], anim[1] + camOffsetY, anim[2] + camOffsetZ);
         camera.position.lerp(tmpCamPos, delta * 5);
         (controls as any).update();
         needsUpdate = true;
       } else {
-        setAnimatingTo(null);
+        animatingToRef.current = null;
         (controls as any).enabled = true;
       }
     }
@@ -207,14 +236,6 @@ function CameraManager({
     if (needsUpdate) invalidate();
   });
 
-  return null;
-}
-
-function WebGLProfiler() {
-  const { gl } = useThree();
-  useFrame(() => {
-    console.log(`WEBGL_PROFILE: Calls: ${gl.info.render.calls} Triangles: ${gl.info.render.triangles} Geometries: ${gl.info.memory.geometries} Textures: ${gl.info.memory.textures} Programs: ${gl.info.programs?.length || 0}`);
-  });
   return null;
 }
 
@@ -228,12 +249,9 @@ export default function Scene() {
   const [plotStatusMap, setPlotStatusMap] = useState<PlotStatusMap>({});
   const [, setDpr] = useState<[number, number]>([1, 2]);
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  // We only run profiling when needed or not at all on production
-  useEffect(() => {
-    // Removed the setInterval forcing mousemove to save CPU
-  }, []);
+  // Stable mobile ref — not re-derived each render
+  const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
+  const isMobile = isMobileRef.current;
 
   useEffect(() => {
     async function loadPlotStatuses() {
@@ -253,40 +271,41 @@ export default function Scene() {
     };
   }, []);
 
-  const handlePlotSelect = (id: number | null, pos: [number, number, number] | null) => {
+  // Memoized stable callbacks — prevents all 18 block components from re-rendering
+  const handlePlotSelect = useCallback((id: number | null, pos: [number, number, number] | null) => {
     setSelectedPlotId(id);
     setSelectedPlotPos(pos);
-  };
+  }, []);
 
-  const handleSearchPlot = (plotNumber: number) => {
+  const handleSearchPlot = useCallback((plotNumber: number) => {
     const pos = getPlotPosition(plotNumber);
     if (pos) {
       setSelectedPlotId(plotNumber);
       setSelectedPlotPos(pos);
     }
-  };
+  }, []);
 
-  const handleResetView = () => {
+  const handleResetView = useCallback(() => {
     setSelectedPlotId(null);
     setSelectedPlotPos(null);
     setResetViewCount((c) => c + 1);
-  };
+  }, []);
 
-  const handleResetHeading = () => {
+  const handleResetHeading = useCallback(() => {
     setResetHeadingCount((c) => c + 1);
-  };
+  }, []);
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
       <Canvas
         frameloop="demand"
-        shadows={!isMobile} // Disable expensive shadows on mobile, or keep them but optimize
-        dpr={isMobile ? [0.75, 1.25] : [1, 2]} // Strict DPR limit for mobile
-        camera={{ 
-          position: isMobile ? [0, 560, 180] : [0, 420, 140], 
-          fov: 45, 
-          near: 2, 
-          far: 4000 
+        shadows={!isMobile}
+        dpr={isMobile ? [0.75, 1.25] : [1, 2]}
+        camera={{
+          position: isMobile ? [0, 560, 180] : [0, 420, 140],
+          fov: 45,
+          near: 2,
+          far: 4000
         }}
         gl={{
           logarithmicDepthBuffer: true,
@@ -296,33 +315,30 @@ export default function Scene() {
           stencil: false,
         }}
       >
-        <WebGLProfiler />
         <PerformanceMonitor onIncline={() => setDpr(isMobile ? [0.75, 1.25] : [1, 2])} onDecline={() => setDpr(isMobile ? [0.75, 1] : [1, 1])}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
-        
+
         <Bvh firstHitOnly>
-        {/* Architectural lighting balanced for satellite terrain */}
+        {/* Architectural lighting */}
         <ambientLight intensity={mapType === 'satellite' ? 0.65 : 0.4} />
-        <directionalLight 
-          castShadow={!isMobile} 
-          position={[120, 250, 70]} 
-          intensity={mapType === 'satellite' ? 1.6 : 1.4} 
-          shadow-mapSize={isMobile ? [128, 128] : [2048, 2048]} // Minimal map if shadow enabled, but disabled by castShadow anyway
+        <directionalLight
+          castShadow={!isMobile}
+          position={[120, 250, 70]}
+          intensity={mapType === 'satellite' ? 1.6 : 1.4}
+          shadow-mapSize={isMobile ? [128, 128] : [2048, 2048]}
         >
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
-        
+
         <directionalLight position={[-120, 120, -70]} intensity={0.4} color="#90b8ff" />
-        
-        {/* Soft environment lighting to enhance PBR materials */}
+
+        {/* Soft environment lighting */}
         <Environment preset="city" />
 
-        {/* Real-World Satellite Imagery Ground Plane */}
-        <SatelliteGround 
-          mapType={mapType} 
-        />
+        {/* Satellite Ground */}
+        <SatelliteGround mapType={mapType} />
 
-        {/* 3D Master Layout Elements */}
+        {/* Road Network */}
         <RoadNetwork />
 
         {/* Plot Clusters */}
@@ -345,34 +361,36 @@ export default function Scene() {
         <PlotsRightBlock3Right selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
         <PlotsRightBlock4Left selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
         <PlotsRightBlock4Right selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
-        
+
         <ParksAndCASite />
         <CornerGardens />
         <EntranceGate />
 
-        {/* Central Focal Point (Roundabout & Clock Tower) */}
+        {/* Central Focal Point */}
         <group position={[0, 0, -21.65]}>
           <Roundabout />
           <ClockTower />
         </group>
 
-        {/* Static Ground Contact Shadows */}
+        {/* Static Ground Contact Shadows (dark mode only) */}
         {mapType === 'dark' && (
           <ContactShadows position={[0, -0.5, 0]} opacity={0.4} scale={1200} blur={2} far={15} frames={1} />
         )}
 
-        <OrbitControls 
-          makeDefault 
-          target={[0, 0, 0]} 
-          maxPolarAngle={is3D ? Math.PI / 2 - 0.08 : 0} 
+        <OrbitControls
+          makeDefault
+          target={[0, 0, 0]}
+          maxPolarAngle={is3D ? Math.PI / 2 - 0.08 : 0}
           minPolarAngle={0}
           enableRotate={is3D}
           minDistance={15}
           maxDistance={750}
+          enableDamping={true}
+          dampingFactor={0.08}
         />
-        
-        {/* Dynamic Camera Animation & Compass Synchronization */}
-        <CameraManager 
+
+        {/* Camera Animation & Compass Sync */}
+        <CameraManager
           targetPos={selectedPlotPos}
           resetViewTrigger={resetViewCount}
           resetHeadingTrigger={resetHeadingCount}
@@ -383,7 +401,7 @@ export default function Scene() {
       </Canvas>
 
       {/* Floating HUD Interface */}
-      <ProjectHUD 
+      <ProjectHUD
         is3D={is3D}
         onToggle3D={setIs3D}
         mapType={mapType}
@@ -397,4 +415,3 @@ export default function Scene() {
     </div>
   );
 }
-

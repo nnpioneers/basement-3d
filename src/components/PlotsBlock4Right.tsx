@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
@@ -52,6 +52,10 @@ export default function PlotsBlock4Right({
     return [...bottomPlots, ...topPlots];
   }, []);
 
+  const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
+    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
+  }, [onPlotSelect, selectedPlotId]);
+
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
       {plotsInfo.map(({ spec, x, y }) => (
@@ -62,13 +66,7 @@ export default function PlotsBlock4Right({
           y={y}
           isSelected={selectedPlotId === spec.id}
           status={plotStatusMap?.[spec.id] || 'available'}
-          onClick={(worldPos) => {
-            if (selectedPlotId === spec.id) {
-              onPlotSelect?.(null, null);
-            } else {
-              onPlotSelect?.(spec.id, worldPos);
-            }
-          }}
+          onClick={handleClick}
         />
       ))}
     </group>

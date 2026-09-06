@@ -1,40 +1,40 @@
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
+import { useMemo, useRef } from 'react';
 
 export default function EntranceGate() {
-  // Premium materials
-  const pillarMaterial = new THREE.MeshStandardMaterial({
-    color: '#1a1b1f', // Dark charcoal/slate stone
-    roughness: 0.8,
-    metalness: 0.2,
-  });
+  const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
 
-  const archMaterial = new THREE.MeshStandardMaterial({
-    color: '#ffffff', // Clean white architecture
-    roughness: 0.4,
-    metalness: 0.1,
-  });
-
-  const blackTextMaterial = new THREE.MeshStandardMaterial({
-    color: '#111111', // High-contrast professional black text
-    roughness: 0.5,
-    metalness: 0.1,
-  });
-
-  const ledLightMaterial = new THREE.MeshStandardMaterial({
-    color: '#00ffcc', // Cyber/modern cyan neon light strip
-    roughness: 0.1,
-    metalness: 0.1,
-    emissive: '#00ffcc',
-    emissiveIntensity: 2.0,
-  });
-
-  // Material for the projector lamp housings
-  const projectorMaterial = new THREE.MeshStandardMaterial({
-    color: '#333333',
-    roughness: 0.3,
-    metalness: 0.8,
-  });
+  // Memoized materials — created once, never recreated on re-renders
+  const { pillarMaterial, archMaterial, blackTextMaterial, ledLightMaterial, projectorMaterial } = useMemo(() => ({
+    pillarMaterial: new THREE.MeshStandardMaterial({
+      color: '#1a1b1f',
+      roughness: 0.8,
+      metalness: 0.2,
+    }),
+    archMaterial: new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      roughness: 0.4,
+      metalness: 0.1,
+    }),
+    blackTextMaterial: new THREE.MeshStandardMaterial({
+      color: '#111111',
+      roughness: 0.5,
+      metalness: 0.1,
+    }),
+    ledLightMaterial: new THREE.MeshStandardMaterial({
+      color: '#00ffcc',
+      roughness: 0.1,
+      metalness: 0.1,
+      emissive: '#00ffcc',
+      emissiveIntensity: 2.0,
+    }),
+    projectorMaterial: new THREE.MeshStandardMaterial({
+      color: '#333333',
+      roughness: 0.3,
+      metalness: 0.8,
+    }),
+  }), []);
 
   return (
     // Positioned at the bottom entrance of the 12m vertical road next to Plot 16 (x = -187.5, z = 50.0)
@@ -108,20 +108,20 @@ export default function EntranceGate() {
           <cylinderGeometry args={[0.2, 0.25, 0.6, 16]} />
         </mesh>
         
-        {/* SpotLight source */}
+        {/* SpotLight source — shadow disabled on mobile (expensive) */}
         <spotLight
           color="#00f0ff"
           intensity={120}
           distance={15}
           angle={Math.PI / 6}
           penumbra={0.8}
-          castShadow={true}
+          castShadow={!isMobileRef.current}
         />
       </group>
 
       {/* Volumetric Beam Left */}
       <mesh position={[-3.7, 3.4, 0]} rotation={[0, 0, -0.463]} castShadow={false}>
-        <coneGeometry args={[0.2, 2.5, 7.6, 32, true]} />
+        <coneGeometry args={[0.2, 2.5, 7.6, 8, true]} />
         <meshBasicMaterial
           color="#00f0ff"
           transparent={true}
@@ -139,20 +139,20 @@ export default function EntranceGate() {
           <cylinderGeometry args={[0.2, 0.25, 0.6, 16]} />
         </mesh>
         
-        {/* SpotLight source */}
+        {/* SpotLight source — shadow disabled on mobile (expensive) */}
         <spotLight
           color="#00f0ff"
           intensity={120}
           distance={15}
           angle={Math.PI / 6}
           penumbra={0.8}
-          castShadow={true}
+          castShadow={!isMobileRef.current}
         />
       </group>
 
       {/* Volumetric Beam Right */}
       <mesh position={[3.7, 3.4, 0]} rotation={[0, 0, 0.463]} castShadow={false}>
-        <coneGeometry args={[0.2, 2.5, 7.6, 32, true]} />
+        <coneGeometry args={[0.2, 2.5, 7.6, 8, true]} />
         <meshBasicMaterial
           color="#00f0ff"
           transparent={true}
