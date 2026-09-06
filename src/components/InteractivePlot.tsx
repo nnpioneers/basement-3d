@@ -49,6 +49,13 @@ function getPlotMaterial(color: string) {
   return matCache[color];
 }
 
+const commonTextProps = {
+  characters: '0123456789. m²ftSOLD',
+  matrixAutoUpdate: false,
+  onUpdate: (c: any) => c.updateMatrix(),
+  raycast: () => null,
+};
+
 const InteractivePlotComponent = ({
   plot,
   x,
@@ -144,17 +151,9 @@ const InteractivePlotComponent = ({
   const areaFt2FontSize = Math.min(1.35, Math.max(0.85, H * 0.105));
   const dimFontSize = Math.min(1.4, Math.max(0.95, Math.min(H * 0.12, avgDepth * 0.1)));
 
-  // Proportional vertical positioning (guarantees zero overlap on 6m, 9m, 12m, 15m plots)
   const numY = metrics.centerY + (H * 0.17);
   const area1Y = metrics.centerY - (H * 0.05);
   const area2Y = metrics.centerY - (H * 0.24);
-
-  const commonTextProps = {
-    characters: '0123456789. m²ftSOLD',
-    matrixAutoUpdate: false,
-    onUpdate: (c: any) => c.updateMatrix(),
-    raycast: () => null,
-  };
 
   return (
     <group position={[x, y, 0]} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>

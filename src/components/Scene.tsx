@@ -40,6 +40,10 @@ interface CameraManagerProps {
   is3D: boolean;
 }
 
+const tmpForward = new THREE.Vector3();
+const tmpTarget = new THREE.Vector3();
+const tmpCamPos = new THREE.Vector3();
+
 function CameraManager({
   targetPos,
   resetViewTrigger,
@@ -102,9 +106,8 @@ function CameraManager({
     let needsUpdate = false;
 
     // Fast direct DOM update for compass rotation (zero React churn)
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    const heading = Math.atan2(forward.x, forward.z);
+    camera.getWorldDirection(tmpForward);
+    const heading = Math.atan2(tmpForward.x, tmpForward.z);
     const needle = document.getElementById('compass-needle');
     if (needle) {
       const deg = -(heading * 180) / Math.PI;
@@ -130,16 +133,22 @@ function CameraManager({
     // Smooth camera reset to view
     if (resettingView) {
       const isMobile = window.innerWidth < 768;
-      const targetVec = new THREE.Vector3(0, 0, 0);
-      const defaultCamPos = is3D 
-        ? (isMobile ? new THREE.Vector3(0, 560, 180) : new THREE.Vector3(0, 420, 140))
-        : (isMobile ? new THREE.Vector3(0, 680, 0.1) : new THREE.Vector3(0, 520, 0.1));
-      const targetDist = (controls as any).target.distanceTo(targetVec);
-      const camDist = camera.position.distanceTo(defaultCamPos);
+      tmpTarget.set(0, 0, 0);
+      
+      if (is3D) {
+        if (isMobile) tmpCamPos.set(0, 560, 180);
+        else tmpCamPos.set(0, 420, 140);
+      } else {
+        if (isMobile) tmpCamPos.set(0, 680, 0.1);
+        else tmpCamPos.set(0, 520, 0.1);
+      }
+
+      const targetDist = (controls as any).target.distanceTo(tmpTarget);
+      const camDist = camera.position.distanceTo(tmpCamPos);
 
       (controls as any).enabled = false;
-      (controls as any).target.lerp(targetVec, delta * 4);
-      camera.position.lerp(defaultCamPos, delta * 4);
+      (controls as any).target.lerp(tmpTarget, delta * 4);
+      camera.position.lerp(tmpCamPos, delta * 4);
       (controls as any).update();
       needsUpdate = true;
 
@@ -151,17 +160,19 @@ function CameraManager({
 
     // Smooth camera transition for 2D/3D toggle (maintains current target)
     if (togglingMode) {
-      const targetVec = (controls as any).target.clone();
-      const dist = Math.max(80, camera.position.distanceTo(targetVec));
+      tmpTarget.copy((controls as any).target);
+      const dist = Math.max(80, camera.position.distanceTo(tmpTarget));
       
-      const targetCamPos = is3D 
-        ? new THREE.Vector3(targetVec.x, targetVec.y + dist * 0.6, targetVec.z + dist * 0.8) // 3D angled
-        : new THREE.Vector3(targetVec.x, targetVec.y + dist, targetVec.z + 0.1); // 2D top-down
+      if (is3D) {
+        tmpCamPos.set(tmpTarget.x, tmpTarget.y + dist * 0.6, tmpTarget.z + dist * 0.8);
+      } else {
+        tmpCamPos.set(tmpTarget.x, tmpTarget.y + dist, tmpTarget.z + 0.1);
+      }
         
-      const camDist = camera.position.distanceTo(targetCamPos);
+      const camDist = camera.position.distanceTo(tmpCamPos);
 
       (controls as any).enabled = false;
-      camera.position.lerp(targetCamPos, delta * 5);
+      camera.position.lerp(tmpCamPos, delta * 5);
       (controls as any).update();
       needsUpdate = true;
 
@@ -173,18 +184,18 @@ function CameraManager({
 
     // Smooth animation to selected plot
     if (animatingTo) {
-      const targetVec = new THREE.Vector3(...animatingTo);
-      const targetDist = (controls as any).target.distanceTo(targetVec);
+      tmpTarget.set(...animatingTo);
+      const targetDist = (controls as any).target.distanceTo(tmpTarget);
 
       (controls as any).enabled = false;
 
       if (targetDist > 0.5) {
-        (controls as any).target.lerp(targetVec, delta * 5);
+        (controls as any).target.lerp(tmpTarget, delta * 5);
         const isMobile = window.innerWidth < 768;
         const camOffsetY = isMobile ? 85 : 65;
         const camOffsetZ = isMobile ? 45 : 35;
-        const camPos = new THREE.Vector3(animatingTo[0], animatingTo[1] + camOffsetY, animatingTo[2] + camOffsetZ);
-        camera.position.lerp(camPos, delta * 5);
+        tmpCamPos.set(animatingTo[0], animatingTo[1] + camOffsetY, animatingTo[2] + camOffsetZ);
+        camera.position.lerp(tmpCamPos, delta * 5);
         (controls as any).update();
         needsUpdate = true;
       } else {
@@ -219,12 +230,9 @@ export default function Scene() {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // We only run profiling when needed or not at all on production
   useEffect(() => {
-    // Force continuous render for profiling
-    const interval = setInterval(() => {
-      window.dispatchEvent(new Event('mousemove'));
-    }, 100);
-    return () => clearInterval(interval);
+    // Removed the setInterval forcing mousemove to save CPU
   }, []);
 
   useEffect(() => {
@@ -273,7 +281,7 @@ export default function Scene() {
       <Canvas
         frameloop="demand"
         shadows={!isMobile} // Disable expensive shadows on mobile, or keep them but optimize
-        dpr={dpr}
+        dpr={isMobile ? [0.75, 1.25] : [1, 2]} // Strict DPR limit for mobile
         camera={{ 
           position: isMobile ? [0, 560, 180] : [0, 420, 140], 
           fov: 45, 
@@ -289,7 +297,7 @@ export default function Scene() {
         }}
       >
         <WebGLProfiler />
-        <PerformanceMonitor onIncline={() => setDpr([1, 2])} onDecline={() => setDpr([1, 1])}>
+        <PerformanceMonitor onIncline={() => setDpr(isMobile ? [0.75, 1.25] : [1, 2])} onDecline={() => setDpr(isMobile ? [0.75, 1] : [1, 1])}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
         
         <Bvh firstHitOnly>
@@ -299,7 +307,7 @@ export default function Scene() {
           castShadow={!isMobile} 
           position={[120, 250, 70]} 
           intensity={mapType === 'satellite' ? 1.6 : 1.4} 
-          shadow-mapSize={isMobile ? [512, 512] : [2048, 2048]}
+          shadow-mapSize={isMobile ? [128, 128] : [2048, 2048]} // Minimal map if shadow enabled, but disabled by castShadow anyway
         >
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
