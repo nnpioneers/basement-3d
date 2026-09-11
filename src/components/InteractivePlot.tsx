@@ -184,30 +184,38 @@ const InteractivePlotComponent = ({
   const avgDepth = (plot.depthB + plot.depthT) / 2;
   const minDim   = Math.min(H, avgDepth);
 
-  // Normal readable size for unselected; slightly larger for selected
-  const baseNumFontSize = Math.min(1.8, Math.max(1.3, minDim * 0.18));
-  let numFontSize       = isSelected ? baseNumFontSize * 1.28 : baseNumFontSize;
+  // Clear, readable size for unselected plots at overview distance
+  const baseNumFontSize = Math.min(3.6, Math.max(2.5, minDim * 0.30));
+  let numFontSize       = isSelected ? baseNumFontSize * 1.18 : baseNumFontSize;
 
   let areaM2FontSize  = numFontSize * 0.42;
   let areaFt2FontSize = numFontSize * 0.36;
-  let dimFontSize     = Math.min(0.75, Math.max(0.50, minDim * 0.075));
+  let dimFontSize     = Math.min(1.0, Math.max(0.65, minDim * 0.085));
 
   // Explicit gaps proportional to font sizes to guarantee clean vertical stacking
   let gap1 = numFontSize * 0.55;
   let gap2 = areaM2FontSize * 0.95;
 
-  // Scale down if total height of central block exceeds plot frontage
-  const totalHalfHeight = (gap1 + gap2 + numFontSize * 0.5) / 2;
-  const maxHalfHeight   = H * 0.38;
+  if (isSelected) {
+    // Scale down selected layout block only if it exceeds plot frontage
+    const totalHalfHeight = (gap1 + gap2 + numFontSize * 0.5) / 2;
+    const maxHalfHeight   = H * 0.40;
 
-  if (totalHalfHeight > maxHalfHeight && totalHalfHeight > 0) {
-    const scale = maxHalfHeight / totalHalfHeight;
-    numFontSize     *= scale;
-    areaM2FontSize  *= scale;
-    areaFt2FontSize *= scale;
-    dimFontSize     *= scale;
-    gap1            *= scale;
-    gap2            *= scale;
+    if (totalHalfHeight > maxHalfHeight && totalHalfHeight > 0) {
+      const scale = maxHalfHeight / totalHalfHeight;
+      numFontSize     *= scale;
+      areaM2FontSize  *= scale;
+      areaFt2FontSize *= scale;
+      dimFontSize     *= scale;
+      gap1            *= scale;
+      gap2            *= scale;
+    }
+  } else {
+    // Unselected plot number: ensure it stays within plot frontage height
+    const maxNumHeight = H * 0.45;
+    if (numFontSize > maxNumHeight) {
+      numFontSize = maxNumHeight;
+    }
   }
 
   const blockCenterY = metrics.centerY;
