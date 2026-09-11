@@ -59,8 +59,8 @@ const commonTextProps = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WHITE_OUTLINE_Z = 0.22;   // z-height for the white outline line
-const LABEL_Z         = 0.30;   // z-height for text labels
+const WHITE_OUTLINE_Z = 0.40;   // z-height for white outline line
+const LABEL_Z         = 0.60;   // z-height for text labels
 
 const InteractivePlotComponent = ({
   plot,
@@ -186,20 +186,20 @@ const InteractivePlotComponent = ({
 
   // Clear, readable size for unselected plots at overview distance
   const baseNumFontSize = Math.min(3.6, Math.max(2.5, minDim * 0.30));
-  let numFontSize       = isSelected ? baseNumFontSize * 1.18 : baseNumFontSize;
+  let numFontSize       = isSelected ? baseNumFontSize * 1.15 : baseNumFontSize;
 
   let areaM2FontSize  = numFontSize * 0.42;
   let areaFt2FontSize = numFontSize * 0.36;
   let dimFontSize     = Math.min(1.0, Math.max(0.65, minDim * 0.085));
 
-  // Explicit gaps proportional to font sizes to guarantee clean vertical stacking
-  let gap1 = numFontSize * 0.55;
-  let gap2 = areaM2FontSize * 0.95;
+  // Generous gaps for selected state to guarantee distinct vertical spacing
+  let gap1 = numFontSize * 0.85;
+  let gap2 = areaM2FontSize * 1.10;
 
   if (isSelected) {
     // Scale down selected layout block only if it exceeds plot frontage
     const totalHalfHeight = (gap1 + gap2 + numFontSize * 0.5) / 2;
-    const maxHalfHeight   = H * 0.40;
+    const maxHalfHeight   = H * 0.42;
 
     if (totalHalfHeight > maxHalfHeight && totalHalfHeight > 0) {
       const scale = maxHalfHeight / totalHalfHeight;
@@ -219,12 +219,12 @@ const InteractivePlotComponent = ({
   }
 
   const blockCenterY = metrics.centerY;
-  const numY   = blockCenterY + gap1 * 0.75;
+  const numY   = blockCenterY + gap1 * 0.90;
   const area1Y = numY - gap1;
   const area2Y = area1Y - gap2;
 
   return (
-    <group position={[x, y, 0]}>
+    <group position={[x, y, 0]} renderOrder={isSelected ? 100 : 0}>
       {/* ── Plot mesh ── */}
       <mesh
         geometry={geom}
@@ -261,6 +261,7 @@ const InteractivePlotComponent = ({
           dashed={true}
           dashSize={0.25}
           gapSize={0.15}
+          renderOrder={105}
         />
       )}
 
@@ -278,8 +279,9 @@ const InteractivePlotComponent = ({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
-        outlineWidth={isSelected ? numFontSize * 0.12 : numFontSize * 0.05}
+        outlineWidth={isSelected ? numFontSize * 0.04 : numFontSize * 0.05}
         outlineColor={isSelected ? '#000000' : '#ffffff'}
+        renderOrder={110}
       >
         {plotNumberStr}
       </Text>
@@ -302,7 +304,7 @@ const InteractivePlotComponent = ({
 
       {/* ── Selected-state overlay ── */}
       {isSelected && (
-        <group>
+        <group renderOrder={110}>
           {/* Area m2 */}
           <Text
             {...commonTextProps}
@@ -313,7 +315,8 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={0} // No outline for clean look
+            outlineWidth={0}
+            renderOrder={110}
           >
             {metrics.fmtM2}
           </Text>
@@ -328,7 +331,8 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={0} // No outline for clean look
+            outlineWidth={0}
+            renderOrder={110}
           >
             {metrics.fmtFt2}
           </Text>
@@ -347,6 +351,8 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
+            renderOrder={120}
+            depthTest={false}
           >
             {formatDimension(dimAnchors.right.dim)}
           </Text>
@@ -363,6 +369,8 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
+            renderOrder={120}
+            depthTest={false}
           >
             {formatDimension(dimAnchors.top.dim)}
           </Text>
@@ -379,6 +387,8 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
+            renderOrder={120}
+            depthTest={false}
           >
             {formatDimension(dimAnchors.left.dim)}
           </Text>
@@ -395,6 +405,8 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
+            renderOrder={120}
+            depthTest={false}
           >
             {formatDimension(dimAnchors.bot.dim)}
           </Text>
