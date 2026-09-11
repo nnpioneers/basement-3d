@@ -125,9 +125,8 @@ function edgeMidOutward(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WHITE_OUTLINE_Z  = 0.25;   // z-height for the white outline line
-const DIM_LABEL_OFFSET = 1.9;    // world units outside the plot for dim labels
-const LABEL_Z          = 0.50;   // z-height for all text labels
+const WHITE_OUTLINE_Z = 0.22;   // z-height for the white outline line
+const LABEL_Z         = 0.30;   // z-height for text labels
 
 const InteractivePlotComponent = ({
   plot,
@@ -144,13 +143,13 @@ const InteractivePlotComponent = ({
   onClick: (id: number, worldPos: [number, number, number]) => void;
   status?: PlotStatus;
 }) => {
-  const { geom, metrics, worldPos, innerLine, outerLine, dimAnchors } =
+  const { geom, metrics, worldPos, innerLine, boundaryLine, dimAnchors } =
     useMemo(() => {
       const g = getPlotGeom(plot);
 
       // ── Area ──────────────────────────────────────────────────────────────
-      const areaSqM   = ((plot.depthB + plot.depthT) / 2) * plot.frontage;
-      const areaSqFt  = areaSqM * 10.7639;
+      const areaSqM  = ((plot.depthB + plot.depthT) / 2) * plot.frontage;
+      const areaSqFt = areaSqM * 10.7639;
 
       const fmtM2 = Math.abs(areaSqM - Math.round(areaSqM)) < 0.05
         ? `${Math.round(areaSqM)} m` + String.fromCharCode(178)
@@ -162,48 +161,51 @@ const InteractivePlotComponent = ({
       })} ft` + String.fromCharCode(178);
 
       // ── Plot corners in local 2-D space (CCW = bottom-right → top-right → top-left → bottom-left) ──
-      // Shape: moveTo(0,0) → (0,F) → (-dT,F) → (-dB,0) → close
       const corners: [number, number][] = [
-        [0,          0          ],  // 0  bottom-right (road side)
-        [0,          plot.frontage],  // 1  top-right
-        [-plot.depthT, plot.frontage],  // 2  top-left
-        [-plot.depthB, 0          ],  // 3  bottom-left
+        [0,            0            ], // 0 bottom-right (road side)
+        [0,            plot.frontage], // 1 top-right
+        [-plot.depthT, plot.frontage], // 2 top-left
+        [-plot.depthB, 0            ], // 3 bottom-left
       ];
 
       // ── Inner black border (exact plot boundary) ───────────────────────
-      const inner = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, 0.16));
+      const inner = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, 0.15));
       inner.push(inner[0].clone()); // close
 
-      // ── Outer white selection border (true parallel offset) ────────────
-      const outer = parallelOffset(corners, 0.55, WHITE_OUTLINE_Z);
+      // ── White selection outline (exact plot boundary, no outward offset) ──
+      const boundary = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, WHITE_OUTLINE_Z));
+      boundary.push(boundary[0].clone()); // close
 
-      // ── Dimension label anchor points + rotation angles ─────────────────
-      // Each anchor: {x, y, angle} placed outside the corresponding edge
-      const [b0x, b0y] = corners[0]; // bottom-right
-      const [b1x, b1y] = corners[1]; // top-right
-      const [b2x, b2y] = corners[2]; // top-left
-      const [b3x, b3y] = corners[3]; // bottom-left
+      // ── Dimension label anchors along edges (inside plot) ───────────────
+      const offsetDist = Math.min(0.75, Math.min(plot.frontage, (plot.depthB + plot.depthT) / 2) * 0.08);
 
-      const [rightX, rightY] = edgeMidOutward(b0x, b0y, b1x, b1y, DIM_LABEL_OFFSET);
-      const [topX,   topY  ] = edgeMidOutward(b1x, b1y, b2x, b2y, DIM_LABEL_OFFSET);
-      const [leftX,  leftY ] = edgeMidOutward(b2x, b2y, b3x, b3y, DIM_LABEL_OFFSET);
-      const [botX,   botY  ] = edgeMidOutward(b3x, b3y, b0x, b0y, DIM_LABEL_OFFSET);
+      function getEdgeAnchor(ax: number, ay: number, bx: number, by: number) {
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len = Math.hypot(dx, dy);
+        // Inward normal for CCW polygon: nx = -dy/len, ny = dx/len
+        const inX = -dy / len;
+        const inY = dx / len;
 
-      // Edge angle in 2-D (for Text rotation around Z)
-      function edgeAngle(ax: number, ay: number, bx: number, by: number) {
-        return Math.atan2(by - ay, bx - ax);
+        const midX = (ax + bx) / 2 + inX * offsetDist;
+        const midY = (ay + by) / 2 + inY * offsetDist;
+
+        let angle = Math.atan2(dy, dx);
+        while (angle > Math.PI / 2) angle -= Math.PI;
+        while (angle < -Math.PI / 2) angle += Math.PI;
+
+        return { x: midX, y: midY, angle, dim: len };
       }
 
-      const rightAngle = edgeAngle(b0x, b0y, b1x, b1y); // ~π/2 (vertical edge)
-      const topAngle   = edgeAngle(b1x, b1y, b2x, b2y); // ~π   (horizontal top)
-      const leftAngle  = edgeAngle(b2x, b2y, b3x, b3y); // slanted
-      const botAngle   = edgeAngle(b3x, b3y, b0x, b0y); // ~0   (horizontal bottom)
+      const [c0x, c0y] = corners[0];
+      const [c1x, c1y] = corners[1];
+      const [c2x, c2y] = corners[2];
+      const [c3x, c3y] = corners[3];
 
-      // Actual dimension of each edge
-      const rightDim = plot.frontage; // right edge = frontage (vertical)
-      const topDim   = plot.depthT;   // top edge   = depthT
-      const leftDim  = Math.hypot(plot.depthB - plot.depthT, plot.frontage); // slanted
-      const botDim   = plot.depthB;   // bottom edge = depthB
+      const rightAnchor = getEdgeAnchor(c0x, c0y, c1x, c1y);
+      const topAnchor   = getEdgeAnchor(c1x, c1y, c2x, c2y);
+      const leftAnchor  = getEdgeAnchor(c2x, c2y, c3x, c3y);
+      const botAnchor   = getEdgeAnchor(c3x, c3y, c0x, c0y);
 
       const centerX = -(plot.depthB + plot.depthT) / 4;
       const centerY = plot.frontage / 2;
@@ -213,12 +215,12 @@ const InteractivePlotComponent = ({
         metrics: { fmtM2, fmtFt2, centerX, centerY },
         worldPos: [x + centerX, 0.5, -(y + centerY)] as [number, number, number],
         innerLine: inner,
-        outerLine: outer,
+        boundaryLine: boundary,
         dimAnchors: {
-          right: { x: rightX, y: rightY, angle: rightAngle, dim: rightDim },
-          top:   { x: topX,   y: topY,   angle: topAngle,   dim: topDim   },
-          left:  { x: leftX,  y: leftY,  angle: leftAngle,  dim: leftDim  },
-          bot:   { x: botX,   y: botY,   angle: botAngle,   dim: botDim   },
+          right: rightAnchor,
+          top:   topAnchor,
+          left:  leftAnchor,
+          bot:   botAnchor,
         },
       };
     }, [plot, x, y]);
@@ -233,28 +235,29 @@ const InteractivePlotComponent = ({
   // ── Colors ───────────────────────────────────────────────────────────────
   const defaultBgColor  = isSold ? '#8c3a3a' : '#faeed9';
   const hoverBgColor    = isSold ? '#a04848' : '#ebdcc2';
-  const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep premium blue
+  const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep rich blue (#1565C0)
   const currentColor    = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
-  // ── Plot number ──────────────────────────────────────────────────────────
-  const plotNumberStr = plot.id.toString().padStart(3, '0');
+  // ── Plot number string ────────────────────────────────────────────────────
+  const plotNumberStr = plot.id.toString();
 
-  // ── Font sizes (proportional to plot geometry) ───────────────────────────
+  // ── Font sizes (strictly bounded to fit inside plot) ──────────────────────
   const H        = plot.frontage;
   const avgDepth = (plot.depthB + plot.depthT) / 2;
+  const minDim   = Math.min(H, avgDepth);
 
-  const numFontSize   = isSelected
-    ? Math.min(4.5, Math.max(2.2, H * 0.33))
-    : Math.min(3.8, Math.max(2.2, Math.min(H * 0.35, avgDepth * 0.28)));
+  const numFontSize = isSelected
+    ? Math.min(1.8, Math.max(1.1, minDim * 0.18))
+    : Math.min(1.6, Math.max(1.0, minDim * 0.16));
 
-  const areaM2FontSize  = Math.min(1.6,  Math.max(1.0,  H * 0.13 ));
-  const areaFt2FontSize = Math.min(1.3,  Math.max(0.85, H * 0.10 ));
-  const dimFontSize     = Math.min(1.35, Math.max(0.9,  Math.min(H * 0.115, avgDepth * 0.095)));
+  const areaM2FontSize  = Math.min(1.0,  Math.max(0.68, minDim * 0.10));
+  const areaFt2FontSize = Math.min(0.85, Math.max(0.58, minDim * 0.08));
+  const dimFontSize     = Math.min(0.90, Math.max(0.62, minDim * 0.085));
 
-  // ── Vertical positions inside the plot (number + area) ───────────────────
-  const numY   = metrics.centerY + H * 0.17;
+  // ── Clean vertical placement inside plot center ──────────────────────────
+  const numY   = metrics.centerY + H * 0.18;
   const area1Y = metrics.centerY - H * 0.03;
-  const area2Y = metrics.centerY - H * 0.20;
+  const area2Y = metrics.centerY - H * 0.22;
 
   return (
     <group
@@ -287,19 +290,19 @@ const InteractivePlotComponent = ({
         <Line
           points={innerLine}
           color="#000000"
-          lineWidth={isSelected ? 2.5 : 2.0}
+          lineWidth={isSelected ? 2.5 : 1.8}
         />
       </mesh>
 
-      {/* ── White selection outline (true parallel offset, follows all edges) ── */}
+      {/* ── White selection boundary line (exact plot perimeter) ── */}
       {isSelected && (
         <Line
-          points={outerLine}
+          points={boundaryLine}
           color="#ffffff"
-          lineWidth={3.5}
+          lineWidth={3.0}
           dashed={true}
-          dashSize={0.8}
-          gapSize={0.4}
+          dashSize={0.6}
+          gapSize={0.3}
         />
       )}
 
@@ -317,7 +320,7 @@ const InteractivePlotComponent = ({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
-        outlineWidth={isSelected ? numFontSize * 0.09 : 0}
+        outlineWidth={numFontSize * 0.08}
         outlineColor="#000000"
       >
         {plotNumberStr}
@@ -352,6 +355,8 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            outlineWidth={areaM2FontSize * 0.08}
+            outlineColor="#000000"
           >
             {metrics.fmtM2}
           </Text>
@@ -366,11 +371,13 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
+            outlineWidth={areaFt2FontSize * 0.08}
+            outlineColor="#000000"
           >
             {metrics.fmtFt2}
           </Text>
 
-          {/* ── Dimension labels — outside each edge, aligned to edge direction ── */}
+          {/* ── Dimension labels along edges ── */}
 
           {/* Right edge (frontage) */}
           <Text
@@ -378,12 +385,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.right.x, dimAnchors.right.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.right.angle]}
             fontSize={dimFontSize}
-            color="#111111"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.12}
+            outlineColor="#000000"
           >
             {formatDimension(dimAnchors.right.dim)}
           </Text>
@@ -394,12 +401,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.top.x, dimAnchors.top.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.top.angle]}
             fontSize={dimFontSize}
-            color="#111111"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.12}
+            outlineColor="#000000"
           >
             {formatDimension(dimAnchors.top.dim)}
           </Text>
@@ -410,12 +417,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.left.x, dimAnchors.left.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.left.angle]}
             fontSize={dimFontSize}
-            color="#111111"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.12}
+            outlineColor="#000000"
           >
             {formatDimension(dimAnchors.left.dim)}
           </Text>
@@ -426,12 +433,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.bot.x, dimAnchors.bot.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.bot.angle]}
             fontSize={dimFontSize}
-            color="#111111"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.12}
+            outlineColor="#000000"
           >
             {formatDimension(dimAnchors.bot.dim)}
           </Text>
