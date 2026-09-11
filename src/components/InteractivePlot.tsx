@@ -176,19 +176,15 @@ const InteractivePlotComponent = ({
       const boundary = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, WHITE_OUTLINE_Z));
       boundary.push(boundary[0].clone()); // close
 
-      // ── Dimension label anchors along edges (inside plot) ───────────────
-      const offsetDist = Math.min(0.75, Math.min(plot.frontage, (plot.depthB + plot.depthT) / 2) * 0.08);
-
+      // ── Dimension label anchors along exact edge midpoints ───────────────
       function getEdgeAnchor(ax: number, ay: number, bx: number, by: number) {
         const dx = bx - ax;
         const dy = by - ay;
         const len = Math.hypot(dx, dy);
-        // Inward normal for CCW polygon: nx = -dy/len, ny = dx/len
-        const inX = -dy / len;
-        const inY = dx / len;
 
-        const midX = (ax + bx) / 2 + inX * offsetDist;
-        const midY = (ay + by) / 2 + inY * offsetDist;
+        // Exact midpoint of the edge segment
+        const midX = (ax + bx) / 2;
+        const midY = (ay + by) / 2;
 
         let angle = Math.atan2(dy, dx);
         while (angle > Math.PI / 2) angle -= Math.PI;
@@ -241,23 +237,38 @@ const InteractivePlotComponent = ({
   // ── Plot number string ────────────────────────────────────────────────────
   const plotNumberStr = plot.id.toString();
 
-  // ── Font sizes (strictly bounded to fit inside plot) ──────────────────────
+  // ── Font sizes & strict vertical spacing (guarantees NO text overlap) ──────
   const H        = plot.frontage;
   const avgDepth = (plot.depthB + plot.depthT) / 2;
   const minDim   = Math.min(H, avgDepth);
 
-  const numFontSize = isSelected
-    ? Math.min(1.8, Math.max(1.1, minDim * 0.18))
-    : Math.min(1.6, Math.max(1.0, minDim * 0.16));
+  let numFontSize = isSelected
+    ? Math.min(1.5, Math.max(0.9, minDim * 0.15))
+    : Math.min(1.4, Math.max(0.85, minDim * 0.14));
 
-  const areaM2FontSize  = Math.min(1.0,  Math.max(0.68, minDim * 0.10));
-  const areaFt2FontSize = Math.min(0.85, Math.max(0.58, minDim * 0.08));
-  const dimFontSize     = Math.min(0.90, Math.max(0.62, minDim * 0.085));
+  let areaM2FontSize  = numFontSize * 0.60;
+  let areaFt2FontSize = numFontSize * 0.50;
+  let dimFontSize     = Math.min(0.85, Math.max(0.55, minDim * 0.08));
 
-  // ── Clean vertical placement inside plot center ──────────────────────────
-  const numY   = metrics.centerY + H * 0.18;
-  const area1Y = metrics.centerY - H * 0.03;
-  const area2Y = metrics.centerY - H * 0.22;
+  // Explicit lineGap proportional to numFontSize to guarantee clean separation
+  let lineGap = numFontSize * 1.12;
+
+  // Scale down if total height of central block exceeds plot frontage
+  const totalHalfHeight = lineGap + numFontSize * 0.5;
+  const maxHalfHeight   = H * 0.38;
+
+  if (totalHalfHeight > maxHalfHeight && totalHalfHeight > 0) {
+    const scale = maxHalfHeight / totalHalfHeight;
+    numFontSize     *= scale;
+    areaM2FontSize  *= scale;
+    areaFt2FontSize *= scale;
+    dimFontSize     *= scale;
+    lineGap         *= scale;
+  }
+
+  const numY   = metrics.centerY + lineGap;
+  const area1Y = metrics.centerY;
+  const area2Y = metrics.centerY - lineGap;
 
   return (
     <group
