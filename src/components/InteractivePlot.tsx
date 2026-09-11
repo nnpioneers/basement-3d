@@ -54,7 +54,6 @@ function getPlotMaterial(color: string) {
 }
 
 const commonTextProps = {
-  characters: '0123456789. m²ft²SOLD',
   raycast: () => null,
 };
 
