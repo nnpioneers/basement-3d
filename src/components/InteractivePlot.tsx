@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Text, Line } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 import { registerPlotPosition } from '../data/plotLookup';
 import type { PlotStatus } from '../types/plot';
 
@@ -53,9 +54,7 @@ function getPlotMaterial(color: string) {
 }
 
 const commonTextProps = {
-  characters: '0123456789. m' + String.fromCharCode(178) + 'ftSOLD',
-  matrixAutoUpdate: false,
-  onUpdate: (c: any) => c.updateMatrix(),
+  characters: '0123456789. m²ft²SOLD',
   raycast: () => null,
 };
 
@@ -160,6 +159,12 @@ const InteractivePlotComponent = ({
   useEffect(() => {
     registerPlotPosition(plot.id, worldPos);
   }, [plot.id, worldPos]);
+
+  // ── CRITICAL: force canvas redraw when selection state changes (frameloop=demand) ──
+  const { invalidate } = useThree();
+  useEffect(() => {
+    invalidate();
+  }, [isSelected, invalidate]);
 
   const [hovered, setHovered] = useState(false);
   const isSold = status === 'sold';
