@@ -162,7 +162,9 @@ const InteractivePlotComponent = ({
   // ── CRITICAL: force canvas redraw when selection state changes (frameloop=demand) ──
   const { invalidate } = useThree();
   useEffect(() => {
-    invalidate();
+    if (isSelected) {
+      invalidate();
+    }
   }, [isSelected, invalidate]);
 
   const [hovered, setHovered] = useState(false);

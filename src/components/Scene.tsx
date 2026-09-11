@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows, Bvh, PerformanceMonitor } from '@react-three/drei';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
 import PlotsCenterLeft from './PlotsCenterLeft';
@@ -316,6 +316,7 @@ export default function Scene() {
         }}
       >
         <PerformanceMonitor onIncline={() => setDpr(isMobile ? [0.75, 1.25] : [1, 2])} onDecline={() => setDpr(isMobile ? [0.75, 1] : [1, 1])}>
+        <Suspense fallback={null}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
 
         <Bvh firstHitOnly>
@@ -397,6 +398,7 @@ export default function Scene() {
           is3D={is3D}
         />
         </Bvh>
+        </Suspense>
         </PerformanceMonitor>
       </Canvas>
 
