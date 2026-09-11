@@ -179,18 +179,19 @@ const InteractivePlotComponent = ({
   const minDim   = Math.min(H, avgDepth);
 
   let numFontSize = isSelected
-    ? Math.min(1.5, Math.max(0.9, minDim * 0.15))
-    : Math.min(1.4, Math.max(0.85, minDim * 0.14));
+    ? Math.min(2.5, Math.max(1.5, minDim * 0.22))
+    : Math.min(1.5, Math.max(1.0, minDim * 0.15));
 
-  let areaM2FontSize  = numFontSize * 0.60;
-  let areaFt2FontSize = numFontSize * 0.50;
+  let areaM2FontSize  = numFontSize * 0.45;
+  let areaFt2FontSize = numFontSize * 0.38;
   let dimFontSize     = Math.min(0.85, Math.max(0.55, minDim * 0.08));
 
-  // Explicit lineGap proportional to numFontSize to guarantee clean separation
-  let lineGap = numFontSize * 1.12;
+  // Explicit gaps proportional to font sizes to guarantee clean separation
+  let gap1 = numFontSize * 0.65;
+  let gap2 = areaM2FontSize * 1.15;
 
   // Scale down if total height of central block exceeds plot frontage
-  const totalHalfHeight = lineGap + numFontSize * 0.5;
+  const totalHalfHeight = (gap1 + gap2 + numFontSize * 0.5) / 2;
   const maxHalfHeight   = H * 0.38;
 
   if (totalHalfHeight > maxHalfHeight && totalHalfHeight > 0) {
@@ -199,12 +200,14 @@ const InteractivePlotComponent = ({
     areaM2FontSize  *= scale;
     areaFt2FontSize *= scale;
     dimFontSize     *= scale;
-    lineGap         *= scale;
+    gap1            *= scale;
+    gap2            *= scale;
   }
 
-  const numY   = metrics.centerY + lineGap;
-  const area1Y = metrics.centerY;
-  const area2Y = metrics.centerY - lineGap;
+  const blockCenterY = metrics.centerY;
+  const numY   = blockCenterY + gap1 * 0.8;
+  const area1Y = numY - gap1;
+  const area2Y = area1Y - gap2;
 
   return (
     <group
@@ -246,10 +249,10 @@ const InteractivePlotComponent = ({
         <Line
           points={boundaryLine}
           color="#ffffff"
-          lineWidth={3.0}
+          lineWidth={2.0}
           dashed={true}
-          dashSize={0.6}
-          gapSize={0.3}
+          dashSize={0.3}
+          gapSize={0.2}
         />
       )}
 
@@ -267,7 +270,7 @@ const InteractivePlotComponent = ({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
-        outlineWidth={numFontSize * 0.08}
+        outlineWidth={isSelected ? numFontSize * 0.15 : 0}
         outlineColor="#000000"
       >
         {plotNumberStr}
@@ -302,8 +305,7 @@ const InteractivePlotComponent = ({
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={areaM2FontSize * 0.08}
-            outlineColor="#000000"
+            outlineWidth={0} // No outline for clean look
           >
             {metrics.fmtM2}
           </Text>
@@ -314,12 +316,11 @@ const InteractivePlotComponent = ({
             position={[metrics.centerX, area2Y, LABEL_Z]}
             rotation={[0, 0, 0]}
             fontSize={areaFt2FontSize}
-            color="#dceeff"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={areaFt2FontSize * 0.08}
-            outlineColor="#000000"
+            outlineWidth={0} // No outline for clean look
           >
             {metrics.fmtFt2}
           </Text>
@@ -332,12 +333,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.right.x, dimAnchors.right.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.right.angle]}
             fontSize={dimFontSize}
-            color="#ffffff"
+            color="#000000"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.12}
-            outlineColor="#000000"
+            outlineWidth={dimFontSize * 0.25}
+            outlineColor="#ffffff"
           >
             {formatDimension(dimAnchors.right.dim)}
           </Text>
@@ -348,12 +349,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.top.x, dimAnchors.top.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.top.angle]}
             fontSize={dimFontSize}
-            color="#ffffff"
+            color="#000000"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.12}
-            outlineColor="#000000"
+            outlineWidth={dimFontSize * 0.25}
+            outlineColor="#ffffff"
           >
             {formatDimension(dimAnchors.top.dim)}
           </Text>
@@ -364,12 +365,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.left.x, dimAnchors.left.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.left.angle]}
             fontSize={dimFontSize}
-            color="#ffffff"
+            color="#000000"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.12}
-            outlineColor="#000000"
+            outlineWidth={dimFontSize * 0.25}
+            outlineColor="#ffffff"
           >
             {formatDimension(dimAnchors.left.dim)}
           </Text>
@@ -380,12 +381,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.bot.x, dimAnchors.bot.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.bot.angle]}
             fontSize={dimFontSize}
-            color="#ffffff"
+            color="#000000"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.12}
-            outlineColor="#000000"
+            outlineWidth={dimFontSize * 0.25}
+            outlineColor="#ffffff"
           >
             {formatDimension(dimAnchors.bot.dim)}
           </Text>
