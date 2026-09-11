@@ -184,17 +184,17 @@ const InteractivePlotComponent = ({
   const avgDepth = (plot.depthB + plot.depthT) / 2;
   const minDim   = Math.min(H, avgDepth);
 
-  let numFontSize = isSelected
-    ? Math.min(2.5, Math.max(1.5, minDim * 0.22))
-    : Math.min(1.5, Math.max(1.0, minDim * 0.15));
+  // Normal readable size for unselected; slightly larger for selected
+  const baseNumFontSize = Math.min(1.8, Math.max(1.3, minDim * 0.18));
+  let numFontSize       = isSelected ? baseNumFontSize * 1.28 : baseNumFontSize;
 
-  let areaM2FontSize  = numFontSize * 0.45;
-  let areaFt2FontSize = numFontSize * 0.38;
-  let dimFontSize     = Math.min(0.85, Math.max(0.55, minDim * 0.08));
+  let areaM2FontSize  = numFontSize * 0.42;
+  let areaFt2FontSize = numFontSize * 0.36;
+  let dimFontSize     = Math.min(0.75, Math.max(0.50, minDim * 0.075));
 
-  // Explicit gaps proportional to font sizes to guarantee clean separation
-  let gap1 = numFontSize * 0.65;
-  let gap2 = areaM2FontSize * 1.15;
+  // Explicit gaps proportional to font sizes to guarantee clean vertical stacking
+  let gap1 = numFontSize * 0.55;
+  let gap2 = areaM2FontSize * 0.95;
 
   // Scale down if total height of central block exceeds plot frontage
   const totalHalfHeight = (gap1 + gap2 + numFontSize * 0.5) / 2;
@@ -211,22 +211,16 @@ const InteractivePlotComponent = ({
   }
 
   const blockCenterY = metrics.centerY;
-  const numY   = blockCenterY + gap1 * 0.8;
+  const numY   = blockCenterY + gap1 * 0.75;
   const area1Y = numY - gap1;
   const area2Y = area1Y - gap2;
 
   return (
-    <group
-      position={[x, y, 0]}
-      matrixAutoUpdate={false}
-      onUpdate={(c) => c.updateMatrix()}
-    >
+    <group position={[x, y, 0]}>
       {/* ── Plot mesh ── */}
       <mesh
         geometry={geom}
         material={getPlotMaterial(currentColor)}
-        matrixAutoUpdate={false}
-        onUpdate={(c) => c.updateMatrix()}
         onClick={(e) => {
           e.stopPropagation();
           onClick(plot.id, worldPos);
@@ -246,7 +240,7 @@ const InteractivePlotComponent = ({
         <Line
           points={innerLine}
           color="#000000"
-          lineWidth={isSelected ? 2.5 : 1.8}
+          lineWidth={isSelected ? 2.2 : 1.5}
         />
       </mesh>
 
@@ -255,10 +249,10 @@ const InteractivePlotComponent = ({
         <Line
           points={boundaryLine}
           color="#ffffff"
-          lineWidth={2.0}
+          lineWidth={1.6}
           dashed={true}
-          dashSize={0.3}
-          gapSize={0.2}
+          dashSize={0.25}
+          gapSize={0.15}
         />
       )}
 
@@ -276,8 +270,8 @@ const InteractivePlotComponent = ({
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
-        outlineWidth={isSelected ? numFontSize * 0.15 : 0}
-        outlineColor="#000000"
+        outlineWidth={isSelected ? numFontSize * 0.12 : numFontSize * 0.05}
+        outlineColor={isSelected ? '#000000' : '#ffffff'}
       >
         {plotNumberStr}
       </Text>
