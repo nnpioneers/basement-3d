@@ -14,10 +14,7 @@ export type PlotSpec = {
 const extrudeSettings = {
   steps: 1,
   depth: 0.1,
-  bevelEnabled: true,
-  bevelThickness: 0.05,
-  bevelSize: 0.05,
-  bevelSegments: 1,
+  bevelEnabled: false,
 };
 
 function formatDimension(val: number): string {
@@ -300,6 +297,9 @@ const InteractivePlotComponent = ({
           points={outerLine}
           color="#ffffff"
           lineWidth={3.5}
+          dashed={true}
+          dashSize={0.8}
+          gapSize={0.4}
         />
       )}
 
