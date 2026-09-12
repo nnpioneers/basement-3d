@@ -262,18 +262,22 @@ function CompoundWall() {
   const cy = WALL_HEIGHT + 0.05;
   const hy = 0.2; // Hedge height/2
   
-  // The gate is on the left bottom (front edge Z=0, center X=4.5). Gap width is 3.0m.
-  const gateX = 4.5;
+  // The gate is on the left wall (X=0). We place it at Z = -12.0 to align with the main entrance road.
+  const gateZ = -12.0;
   const gapW = 3.0;
-  const leftW = gateX - (gapW / 2);
-  const rightW = W - gateX - (gapW / 2);
+  
+  // Left wall consists of two parts: front of gate and back of gate
+  // Front part: from Z=0 to Z = gateZ + gapW/2
+  const leftWallFrontLen = Math.abs(gateZ + gapW/2);
+  // Back part: from Z = gateZ - gapW/2 to Z = -D
+  const leftWallBackLen = D - Math.abs(gateZ - gapW/2);
 
-  // Front wall left of gate
-  const fwL_geom = new THREE.BoxGeometry(leftW, WALL_HEIGHT, WALL_THICK);
-  const fwL_cap = new THREE.BoxGeometry(leftW + 0.08, 0.1, WALL_THICK + 0.08);
-  // Front wall right of gate
-  const fwR_geom = new THREE.BoxGeometry(rightW, WALL_HEIGHT, WALL_THICK);
-  const fwR_cap = new THREE.BoxGeometry(rightW + 0.08, 0.1, WALL_THICK + 0.08);
+  // Front part geometries
+  const lwF_geom = new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, leftWallFrontLen);
+  const lwF_cap = new THREE.BoxGeometry(WALL_THICK + 0.08, 0.1, leftWallFrontLen + 0.08);
+  // Back part geometries
+  const lwB_geom = new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, leftWallBackLen);
+  const lwB_cap = new THREE.BoxGeometry(WALL_THICK + 0.08, 0.1, leftWallBackLen + 0.08);
 
   return (
     <group>
@@ -283,28 +287,30 @@ function CompoundWall() {
       <mesh position={[W/2, hy, -D + 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
       <mesh position={[W/2, hy, -D - 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
       
-      {/* Left Wall & Hedges */}
-      <mesh position={[0, y, -D/2]} geometry={GEO_WALL_SHORT} material={MAT_WALL} />
-      <mesh position={[0, cy, -D/2]} geometry={GEO_WALL_CAP_S} material={MAT_WALL_CAP} />
-      <mesh position={[0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
-      <mesh position={[-0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
-
       {/* Right Wall & Hedges */}
       <mesh position={[W, y, -D/2]} geometry={GEO_WALL_SHORT} material={MAT_WALL} />
       <mesh position={[W, cy, -D/2]} geometry={GEO_WALL_CAP_S} material={MAT_WALL_CAP} />
       <mesh position={[W - 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
       <mesh position={[W + 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
 
-      {/* Front Wall (with gate gap) */}
-      <mesh position={[leftW/2, y, 0]} geometry={fwL_geom} material={MAT_WALL} />
-      <mesh position={[leftW/2, cy, 0]} geometry={fwL_cap} material={MAT_WALL_CAP} />
-      <mesh position={[leftW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(leftW, 0.4, 0.4)} material={MAT_SHRUB} />
-      <mesh position={[leftW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(leftW, 0.4, 0.4)} material={MAT_SHRUB} />
+      {/* Front Wall & Hedges (Solid now) */}
+      <mesh position={[W/2, y, 0]} geometry={GEO_WALL_LONG} material={MAT_WALL} />
+      <mesh position={[W/2, cy, 0]} geometry={GEO_WALL_CAP_L} material={MAT_WALL_CAP} />
+      <mesh position={[W/2, hy, 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
+      <mesh position={[W/2, hy, -0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
 
-      <mesh position={[gateX + gapW/2 + rightW/2, y, 0]} geometry={fwR_geom} material={MAT_WALL} />
-      <mesh position={[gateX + gapW/2 + rightW/2, cy, 0]} geometry={fwR_cap} material={MAT_WALL_CAP} />
-      <mesh position={[gateX + gapW/2 + rightW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(rightW, 0.4, 0.4)} material={MAT_SHRUB} />
-      <mesh position={[gateX + gapW/2 + rightW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(rightW, 0.4, 0.4)} material={MAT_SHRUB} />
+      {/* Left Wall (with gate gap) */}
+      {/* Front part */}
+      <mesh position={[0, y, -leftWallFrontLen/2]} geometry={lwF_geom} material={MAT_WALL} />
+      <mesh position={[0, cy, -leftWallFrontLen/2]} geometry={lwF_cap} material={MAT_WALL_CAP} />
+      <mesh position={[0.4, hy, -leftWallFrontLen/2]} geometry={new THREE.BoxGeometry(0.4, 0.4, leftWallFrontLen)} material={MAT_SHRUB} />
+      <mesh position={[-0.4, hy, -leftWallFrontLen/2]} geometry={new THREE.BoxGeometry(0.4, 0.4, leftWallFrontLen)} material={MAT_SHRUB} />
+      
+      {/* Back part */}
+      <mesh position={[0, y, -D + leftWallBackLen/2]} geometry={lwB_geom} material={MAT_WALL} />
+      <mesh position={[0, cy, -D + leftWallBackLen/2]} geometry={lwB_cap} material={MAT_WALL_CAP} />
+      <mesh position={[0.4, hy, -D + leftWallBackLen/2]} geometry={new THREE.BoxGeometry(0.4, 0.4, leftWallBackLen)} material={MAT_SHRUB} />
+      <mesh position={[-0.4, hy, -D + leftWallBackLen/2]} geometry={new THREE.BoxGeometry(0.4, 0.4, leftWallBackLen)} material={MAT_SHRUB} />
     </group>
   );
 }
@@ -314,8 +320,8 @@ function EntranceGate() {
   const py = 1.6 / 2;
   const cy = 1.6 + 0.07;
   return (
-    <group position={[4.5, 0, 0]}>
-      {/* Left Pillar */}
+    <group position={[0, 0, -12.0]} rotation={[0, Math.PI / 2, 0]}>
+      {/* Left Pillar (looking from outside) */}
       <mesh position={[-1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
       <mesh position={[-1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
       <LampPost x={-1.5} z={0} py={1.67} />
@@ -351,10 +357,10 @@ export default function EntrancePark() {
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Short paved entry path from the gate
+    // 2. Short paved entry path from the gate on left wall (X=0, Z=-12 -> Y=12)
     const entryPath = new THREE.Shape();
-    entryPath.moveTo(3.0, 0); entryPath.lineTo(6.0, 0);
-    entryPath.lineTo(6.0, 2.5); entryPath.lineTo(3.0, 2.5); entryPath.lineTo(3.0, 0);
+    entryPath.moveTo(0, 10.5); entryPath.lineTo(2.5, 10.5);
+    entryPath.lineTo(2.5, 13.5); entryPath.lineTo(0, 13.5); entryPath.lineTo(0, 10.5);
 
     // 3. Rubber play surface (upper zone)
     const rubber = new THREE.Shape();
