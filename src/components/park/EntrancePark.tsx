@@ -12,6 +12,7 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { BoxPath } from './Geometry';
 
 // ── Park dimensions ───────────────────────────────────────────────────────────
 const W = 27.0;
@@ -391,18 +392,7 @@ export default function EntrancePark() {
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
     // 2. Pathway Network (Perimeter + Central Cross)
-    const paths: THREE.Shape[] = [];
-    
-    // Perimeter loop (1.5m offset from wall, 2m wide path)
-    addRect(paths, 1.5, 1.5, 3.5, 36.0);    // Left
-    addRect(paths, 23.5, 1.5, 25.5, 36.0);  // Right
-    addRect(paths, 3.5, 1.5, 23.5, 3.5);    // Top
-    addRect(paths, 3.5, 34.0, 23.5, 36.0);  // Bottom
-
-    // Central Cross
-    addRect(paths, 12.5, 3.5, 14.5, D);     // Vertical (Connects to Gate at D=37.65)
-    addRect(paths, 3.5, 17.5, 12.5, 19.5);  // Horizontal Left
-    addRect(paths, 14.5, 17.5, 23.5, 19.5); // Horizontal Right
+    // Replaced with BoxPath in render loop to match the main Park
 
     // 3. Play Areas & Pads (Rubber)
     const rubberShapes: THREE.Shape[] = [];
@@ -424,7 +414,6 @@ export default function EntrancePark() {
 
     return {
       grass:      ext(grass,             0.10, true),
-      entryPath:  ext(paths,             0.14, false),
       rubber:     ext(rubberShapes,      0.16, true), // beveled for safety mat look
       sand:       ext(sandShapes,        0.18, false),
       pergolaBase:ext(pergolaBaseShapes, 0.12, true),
@@ -454,7 +443,6 @@ export default function EntrancePark() {
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
       <mesh geometry={groundGeoms.grass}       material={MAT_GRASS}   receiveShadow />
-      <mesh geometry={groundGeoms.entryPath}   material={MAT_PATH}    receiveShadow />
       <mesh geometry={groundGeoms.rubber}      material={MAT_RUBBER}  receiveShadow />
       <mesh geometry={groundGeoms.sand}        material={MAT_SOIL}    receiveShadow />
       <mesh geometry={groundGeoms.pergolaBase} material={MAT_PATH}    receiveShadow />
@@ -462,6 +450,22 @@ export default function EntrancePark() {
       {/* ── 3D equipment group (rotation restores Y-up orientation) ────── */}
       <group position={[0, 0, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
         
+        {/* Pathway Network using BoxPath (Y-up orientation) */}
+        {/* Note: BoxPath takes x0, z0, x1, z1 (Z is negative in this Y-up space) */}
+        <group position={[0, 0.02, 0]}>
+          {/* Perimeter Left & Right (width=2) */}
+          <BoxPath x0={2.5} z0={-1.5} x1={2.5} z1={-36.0} w={2.0} color={C_PATH} y={0} />
+          <BoxPath x0={24.5} z0={-1.5} x1={24.5} z1={-36.0} w={2.0} color={C_PATH} y={0} />
+          {/* Perimeter Top & Bottom (width=2) */}
+          <BoxPath x0={3.5} z0={-2.5} x1={23.5} z1={-2.5} w={2.0} color={C_PATH} y={0} />
+          <BoxPath x0={3.5} z0={-35.0} x1={23.5} z1={-35.0} w={2.0} color={C_PATH} y={0} />
+          {/* Central Vertical (Gate to Center) */}
+          <BoxPath x0={13.5} z0={-3.5} x1={13.5} z1={-D} w={2.0} color={C_PATH} y={0} />
+          {/* Central Horizontal Left & Right */}
+          <BoxPath x0={3.5} z0={-18.5} x1={12.5} z1={-18.5} w={2.0} color={C_PATH} y={0} />
+          <BoxPath x0={14.5} z0={-18.5} x1={23.5} z1={-18.5} w={2.0} color={C_PATH} y={0} />
+        </group>
+
         {/* 1 & 2. Boundary Wall & Entrance Gate */}
         <CompoundWall />
         <EntranceGate />
