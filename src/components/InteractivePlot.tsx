@@ -185,8 +185,8 @@ const InteractivePlotComponent = ({
   const avgDepth = (plot.depthB + plot.depthT) / 2;
   const minDim   = Math.min(H, avgDepth);
 
-  // Clear, readable size for unselected plots at overview distance
-  const baseNumFontSize = Math.min(5.0, Math.max(3.5, minDim * 0.45));
+  // Clear, readable uniform size for ALL unselected plots
+  const baseNumFontSize = 3.8;
   let numFontSize       = isSelected ? baseNumFontSize * 0.65 : baseNumFontSize;
 
   let areaM2FontSize  = numFontSize * 0.42;
@@ -210,12 +210,6 @@ const InteractivePlotComponent = ({
       dimFontSize     *= scale;
       gap1            *= scale;
       gap2            *= scale;
-    }
-  } else {
-    // Unselected plot number: ensure it stays within plot frontage height
-    const maxNumHeight = H * 0.45;
-    if (numFontSize > maxNumHeight) {
-      numFontSize = maxNumHeight;
     }
   }
 
