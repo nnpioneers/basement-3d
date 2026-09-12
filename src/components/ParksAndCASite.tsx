@@ -2,17 +2,10 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import MainPark from './park/MainPark';
+import EntrancePark from './park/EntrancePark';
 
 export default function ParksAndCASite() {
-  const { parkGeom, caGeom } = useMemo(() => {
-    // 1. Far-Left Bottom Park
-    const parkShape = new THREE.Shape();
-    parkShape.moveTo(-220.5, -51.26);
-    parkShape.lineTo(-193.5, -51.26);
-    parkShape.lineTo(-193.5, -13.61);
-    parkShape.lineTo(-220.5, -13.61);
-    parkShape.lineTo(-220.5, -51.26);
-
+  const { caGeom } = useMemo(() => {
     // 2. Top-Left CA Site
     const caShape = new THREE.Shape();
     caShape.moveTo(-106.5, 63.80);
@@ -41,7 +34,6 @@ export default function ParksAndCASite() {
     };
 
     return {
-      parkGeom: new THREE.ExtrudeGeometry(parkShape, extrudeSettings),
       caGeom: new THREE.ExtrudeGeometry(caShape, extrudeSettings),
       topParkGeom: new THREE.ExtrudeGeometry(topParkShape, extrudeSettings),
     };
@@ -51,23 +43,11 @@ export default function ParksAndCASite() {
     <group rotation={[-Math.PI / 2, 0, 0]}>
       
       {/* =========================================================
-          1. FAR-LEFT BOTTOM PARK
+          1. FAR-LEFT BOTTOM PARK (CHILDREN'S PARK)
           ========================================================= */}
-      <mesh geometry={parkGeom} raycast={() => null} matrixAutoUpdate={false} onUpdate={(c) => c.updateMatrix()}>
-        <meshStandardMaterial attach="material-0" color="#2e7d32" roughness={0.85} metalness={0.05} />
-        <meshStandardMaterial attach="material-1" color="#1b5e20" roughness={0.9} />
-      </mesh>
-      <Text
-        position={[-207.0, -32.435, 0.35]}
-        rotation={[0, 0, 0]}
-        fontSize={6.0}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-        fontWeight="bold"
-      >
-        Park
-      </Text>
+      <group position={[-220.5, -51.26, 0]}>
+        <EntrancePark />
+      </group>
 
       {/* =========================================================
           2. TOP-LEFT CA SITE
