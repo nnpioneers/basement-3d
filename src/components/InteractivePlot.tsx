@@ -47,7 +47,7 @@ function getPlotMaterial(color: string) {
   if (!matCache[color]) {
     matCache[color] = new THREE.MeshStandardMaterial({
       color,
-      roughness: 0.8,
+      roughness: 1.0, // Fully rough for a solid, non-reflective appearance like the reference
       metalness: 0.0,
     });
   }
@@ -172,8 +172,8 @@ const InteractivePlotComponent = ({
   const isSold = status === 'sold';
 
   // ── Colors ───────────────────────────────────────────────────────────────
-  const defaultBgColor  = isSold ? '#8c3a3a' : '#c8b88a'; // Darker tan/beige
-  const hoverBgColor    = isSold ? '#a04848' : '#b3a375';
+  const defaultBgColor  = isSold ? '#8c3a3a' : '#d4b886'; // Richer, darker beige to match reference
+  const hoverBgColor    = isSold ? '#a04848' : '#c2a673';
   const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep rich blue (#1565C0)
   const currentColor    = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
