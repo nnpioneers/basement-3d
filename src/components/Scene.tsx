@@ -53,8 +53,8 @@ function CameraManager({
 }: CameraManagerProps) {
   const { camera, controls, invalidate } = useThree();
 
-  // All animation state as refs — zero React re-renders during animation
   const animatingToRef = useRef<[number, number, number] | null>(null);
+  const targetCamPosRef = useRef(new THREE.Vector3());
   const resettingViewRef = useRef(false);
   const resettingHeadingRef = useRef(false);
   const togglingModeRef = useRef(false);
@@ -79,12 +79,24 @@ function CameraManager({
 
   // React to targetPos changes — write to ref, no setState
   useEffect(() => {
-    if (targetPos) {
+    if (targetPos && controls) {
       animatingToRef.current = targetPos;
       resettingViewRef.current = false;
+      
+      // Calculate exact camera destination preserving the current view angle
+      const currentDir = new THREE.Vector3().subVectors(camera.position, (controls as any).target).normalize();
+      
+      // Ensure we don't go strictly underground or purely top-down, but preserve the heading completely
+      if (currentDir.y < 0.2) currentDir.y = 0.2;
+      if (currentDir.y > 0.8) currentDir.y = 0.8;
+      currentDir.normalize();
+
+      const desiredDist = isMobileRef.current ? 110 : 75;
+      targetCamPosRef.current.set(targetPos[0], targetPos[1], targetPos[2]).add(currentDir.multiplyScalar(desiredDist));
+
       invalidate();
     }
-  }, [targetPos, invalidate]);
+  }, [targetPos, camera, controls, invalidate]);
 
   // React to reset view trigger — write to ref
   useEffect(() => {
@@ -214,13 +226,11 @@ function CameraManager({
     if (animatingToRef.current) {
       const anim = animatingToRef.current;
       tmpTarget.set(anim[0], anim[1], anim[2]);
-      const targetDist = (controls as any).target.distanceTo(tmpTarget);
       
-      const isMobile = isMobileRef.current;
-      const camOffsetY = isMobile ? 95 : 65;
-      const camOffsetZ = isMobile ? 55 : 35;
-      tmpCamPos.set(anim[0], anim[1] + camOffsetY, anim[2] + camOffsetZ);
+      // Use the locked-in camera destination computed when the plot was clicked
+      tmpCamPos.copy(targetCamPosRef.current);
 
+      const targetDist = (controls as any).target.distanceTo(tmpTarget);
       const camDist = camera.position.distanceTo(tmpCamPos);
 
       (controls as any).enabled = false;
