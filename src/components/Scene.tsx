@@ -55,6 +55,10 @@ function CameraManager({
 
   const animatingToRef = useRef<[number, number, number] | null>(null);
   const targetCamPosRef = useRef(new THREE.Vector3());
+  const startTargetRef = useRef(new THREE.Vector3());
+  const startCamPosRef = useRef(new THREE.Vector3());
+  const animProgressRef = useRef(0);
+
   const resettingViewRef = useRef(false);
   const resettingHeadingRef = useRef(false);
   const togglingModeRef = useRef(false);
@@ -83,14 +87,15 @@ function CameraManager({
       animatingToRef.current = targetPos;
       resettingViewRef.current = false;
       
-      // Calculate exact camera destination preserving the current view angle
+      // Capture exact starting positions for a perfect smoothstep tween
+      startTargetRef.current.copy((controls as any).target);
+      startCamPosRef.current.copy(camera.position);
+      animProgressRef.current = 0;
+      
+      // Calculate exact camera destination preserving the current view angle perfectly
       const currentDir = new THREE.Vector3().subVectors(camera.position, (controls as any).target).normalize();
       
-      // Ensure we don't go strictly underground or purely top-down, but preserve the heading completely
-      if (currentDir.y < 0.2) currentDir.y = 0.2;
-      if (currentDir.y > 0.8) currentDir.y = 0.8;
-      currentDir.normalize();
-
+      // Exact desired viewing distance for the selected plot
       const desiredDist = isMobileRef.current ? 110 : 75;
       targetCamPosRef.current.set(targetPos[0], targetPos[1], targetPos[2]).add(currentDir.multiplyScalar(desiredDist));
 
@@ -222,30 +227,30 @@ function CameraManager({
       }
     }
 
-    // Smooth fly-to selected plot
+    // Smooth fly-to selected plot using perfect interpolation (no rotation glitches)
     if (animatingToRef.current) {
       const anim = animatingToRef.current;
       tmpTarget.set(anim[0], anim[1], anim[2]);
-      
-      // Use the locked-in camera destination computed when the plot was clicked
       tmpCamPos.copy(targetCamPosRef.current);
 
-      const targetDist = (controls as any).target.distanceTo(tmpTarget);
-      const camDist = camera.position.distanceTo(tmpCamPos);
-
       (controls as any).enabled = false;
+      
+      animProgressRef.current += delta * 2.5; // Transition speed
+      const t = THREE.MathUtils.clamp(animProgressRef.current, 0, 1);
+      
+      // Smoothstep easing (ease-in-out) for premium feel
+      const ease = t * t * (3 - 2 * t);
 
-      // Allow a tiny bit more tolerance (1.0 instead of 0.5) to avoid micro-jitter at the end
-      if (targetDist > 1.0 || camDist > 1.0) {
-        // Use smooth damp-like lerp to avoid snapping
-        (controls as any).target.lerp(tmpTarget, delta * 6);
-        camera.position.lerp(tmpCamPos, delta * 6);
+      if (t < 1.0) {
+        (controls as any).target.lerpVectors(startTargetRef.current, tmpTarget, ease);
+        camera.position.lerpVectors(startCamPosRef.current, tmpCamPos, ease);
         (controls as any).update();
         needsUpdate = true;
       } else {
-        // Snap to exact position at the very end to ensure stability
+        // Final snap to guarantee exact position
         (controls as any).target.copy(tmpTarget);
         camera.position.copy(tmpCamPos);
+        (controls as any).update();
         animatingToRef.current = null;
         (controls as any).enabled = true;
         needsUpdate = true;
