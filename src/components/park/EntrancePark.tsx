@@ -14,63 +14,92 @@ const RAIL     = '#404040';
 const WOOD     = '#8b5a2b';
 const LEAVES   = '#2e7d32';
 
-// ── Play Structures (Copied for self-containment) ────────────────────────
+// ── Shared Global Materials (Mobile Optimization) ────────────────────────
+const matGrass = new THREE.MeshStandardMaterial({ color: GRASS, roughness: 0.85, metalness: 0.05 });
+const matPath = new THREE.MeshStandardMaterial({ color: PATH, roughness: 0.9 });
+const matRubber = new THREE.MeshStandardMaterial({ color: RUBBER, roughness: 0.9 });
+const matSand = new THREE.MeshStandardMaterial({ color: SAND, roughness: 0.95 });
+const matBlue = new THREE.MeshStandardMaterial({ color: BLUE, roughness: 0.6, metalness: 0.2 });
+const matRed = new THREE.MeshStandardMaterial({ color: RED, roughness: 0.6, metalness: 0.15 });
+const matYellow = new THREE.MeshStandardMaterial({ color: YELLOW, roughness: 0.55, metalness: 0.1 });
+const matPlatform = new THREE.MeshStandardMaterial({ color: PLATFORM, roughness: 0.65 });
+const matRail = new THREE.MeshStandardMaterial({ color: RAIL, roughness: 0.7, metalness: 0.4 });
+const matWood = new THREE.MeshStandardMaterial({ color: WOOD, roughness: 0.9 });
+const matLeaves = new THREE.MeshStandardMaterial({ color: LEAVES, roughness: 0.9 });
+const matChain = new THREE.MeshStandardMaterial({ color: "#606060", roughness: 0.5, metalness: 0.7 });
+const matFulcrum = new THREE.MeshStandardMaterial({ color: "#888", roughness: 0.7, metalness: 0.3 });
+const matBenchLegs = new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.8, metalness: 0.8 });
+
+// ── Shared Global Geometries (Mobile Optimization) ────────────────────────
+// Play Structure
+const geomLeg = new THREE.CylinderGeometry(0.08, 0.09, 2.2, 5); // reduced segments
+const geomPlatform = new THREE.BoxGeometry(1.6, 0.12, 1.6);
+const geomRailSide = new THREE.BoxGeometry(0.08, 0.9, 1.6);
+const geomRailBack = new THREE.BoxGeometry(1.6, 0.9, 0.08);
+const geomRoof = new THREE.ConeGeometry(1.3, 0.9, 4);
+const geomRoofBase = new THREE.BoxGeometry(1.8, 0.1, 1.8);
+const geomSlide = new THREE.BoxGeometry(2.7, 0.1, 0.7);
+const geomSlideRail = new THREE.BoxGeometry(2.7, 0.35, 0.06);
+const geomLadderRail = new THREE.BoxGeometry(0.07, 2.2 * 1.12, 0.07);
+const geomLadderRung = new THREE.BoxGeometry(0.5, 0.05, 0.05);
+
+// Swings
+const geomAFrame = new THREE.CylinderGeometry(0.07, 0.09, 3.2, 5); // reduced
+const geomSwingTop = new THREE.BoxGeometry(4.4, 0.14, 0.14);
+const geomSwingChain = new THREE.CylinderGeometry(0.025, 0.025, 2.5, 4); // reduced
+const geomSwingSeat = new THREE.BoxGeometry(0.42, 0.07, 0.55);
+
+// SeeSaw
+const geomFulcrumCyl = new THREE.CylinderGeometry(0.12, 0.16, 0.7, 6);
+const geomPlank = new THREE.BoxGeometry(3.0, 0.1, 0.3);
+const geomHandle = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 5);
+
+// Tree
+const geomTrunk = new THREE.CylinderGeometry(0.15, 0.2, 1.2, 5);
+const geomLeaves = new THREE.SphereGeometry(1.2, 6, 5); // significantly reduced for mobile
+
+// Bench
+const geomBenchSeat = new THREE.BoxGeometry(1.5, 0.08, 0.4);
+const geomBenchBack = new THREE.BoxGeometry(1.5, 0.4, 0.05);
+const geomBenchLeg = new THREE.BoxGeometry(0.08, 0.25, 0.3);
+
+// Sandbox block
+const geomSandBoxCube = new THREE.BoxGeometry(0.8, 0.4, 0.8);
+const geomSandCyl = new THREE.CylinderGeometry(0.3, 0.3, 0.3, 6);
+
+
+// ── Components using Shared Resources ────────────────────────
+
 function PlayStructure({ x, z }: { x: number; z: number }) {
   const platH = 2.2;
   return (
     <group position={[x, 0, z]}>
       {/* 4 corner support legs */}
       {[[-0.7,-0.7],[0.7,-0.7],[-0.7,0.7],[0.7,0.7]].map(([ox,oz],i) => (
-        <mesh key={i} position={[ox, platH/2, oz]} castShadow>
-          <cylinderGeometry args={[0.08, 0.09, platH, 8]} />
-          <meshStandardMaterial color={BLUE} roughness={0.6} metalness={0.2} />
-        </mesh>
+        <mesh key={i} position={[ox, platH/2, oz]} castShadow geometry={geomLeg} material={matBlue} />
       ))}
       {/* Platform deck */}
-      <mesh position={[0, platH, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.6, 0.12, 1.6]} />
-        <meshStandardMaterial color={PLATFORM} roughness={0.65} />
-      </mesh>
+      <mesh position={[0, platH, 0]} castShadow receiveShadow geometry={geomPlatform} material={matPlatform} />
       {/* Platform handrail sides */}
       {[[-0.8, 0], [0.8, 0], [0, -0.8]].map(([rx, rz], i) => (
-        <mesh key={`rail${i}`} position={[rx, platH + 0.45, rz]} castShadow>
-          <boxGeometry args={[rx === 0 ? 1.6 : 0.08, 0.9, rz === 0 ? 0.08 : 1.6]} />
-          <meshStandardMaterial color={RED} roughness={0.6} metalness={0.15} />
-        </mesh>
+        <mesh key={`rail${i}`} position={[rx, platH + 0.45, rz]} castShadow 
+          geometry={rx === 0 ? geomRailBack : geomRailSide} material={matRed} />
       ))}
       {/* Pyramid roof/canopy */}
-      <mesh position={[0, platH + 1.35, 0]} castShadow>
-        <coneGeometry args={[1.3, 0.9, 4]} />
-        <meshStandardMaterial color={RED} roughness={0.65} />
-      </mesh>
-      <mesh position={[0, platH + 0.9, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.1, 1.8]} />
-        <meshStandardMaterial color={BLUE} roughness={0.65} />
-      </mesh>
+      <mesh position={[0, platH + 1.35, 0]} castShadow geometry={geomRoof} material={matRed} />
+      <mesh position={[0, platH + 0.9, 0]} castShadow geometry={geomRoofBase} material={matBlue} />
       {/* SLIDE */}
-      <mesh position={[1.5, platH * 0.45, 0.3]} rotation={[0, 0.15, -Math.PI / 6]} castShadow>
-        <boxGeometry args={[2.7, 0.1, 0.7]} />
-        <meshStandardMaterial color={YELLOW} roughness={0.55} metalness={0.1} />
-      </mesh>
+      <mesh position={[1.5, platH * 0.45, 0.3]} rotation={[0, 0.15, -Math.PI / 6]} castShadow geometry={geomSlide} material={matYellow} />
       {/* Slide side rails */}
       {[-0.36, 0.36].map((oz, i) => (
-        <mesh key={`sr${i}`} position={[1.5, platH * 0.45 + 0.22, 0.3 + oz]} rotation={[0, 0.15, -Math.PI / 6]} castShadow>
-          <boxGeometry args={[2.7, 0.35, 0.06]} />
-          <meshStandardMaterial color={YELLOW} roughness={0.55} />
-        </mesh>
+        <mesh key={`sr${i}`} position={[1.5, platH * 0.45 + 0.22, 0.3 + oz]} rotation={[0, 0.15, -Math.PI / 6]} castShadow geometry={geomSlideRail} material={matYellow} />
       ))}
       {/* LADDER */}
       {[-0.22, 0.22].map((ox, i) => (
-        <mesh key={`lr${i}`} position={[-0.7 + ox, platH / 2, -1.1]} rotation={[-Math.PI / 5.5, 0, 0]} castShadow>
-          <boxGeometry args={[0.07, platH * 1.12, 0.07]} />
-          <meshStandardMaterial color={RAIL} roughness={0.7} metalness={0.4} />
-        </mesh>
+        <mesh key={`lr${i}`} position={[-0.7 + ox, platH / 2, -1.1]} rotation={[-Math.PI / 5.5, 0, 0]} castShadow geometry={geomLadderRail} material={matRail} />
       ))}
       {[0.3, 0.55, 0.8, 1.05, 1.3, 1.55, 1.8].map((yOff, i) => (
-        <mesh key={`rng${i}`} position={[-0.7, yOff, -1.1 - (yOff / platH) * 0.5]} castShadow>
-          <boxGeometry args={[0.5, 0.05, 0.05]} />
-          <meshStandardMaterial color={RAIL} roughness={0.7} metalness={0.4} />
-        </mesh>
+        <mesh key={`rng${i}`} position={[-0.7, yOff, -1.1 - (yOff / platH) * 0.5]} castShadow geometry={geomLadderRung} material={matRail} />
       ))}
     </group>
   );
@@ -83,53 +112,20 @@ function SwingSet({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
     <group position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* A-frames */}
-      <mesh position={[-frameW/2 - 0.2, frameH/2, -0.35]} rotation={[0, 0,  0.18]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, frameH, 8]} />
-        <meshStandardMaterial color={RED} roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[-frameW/2 - 0.2, frameH/2, 0.35]} rotation={[0, 0,  0.18]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, frameH, 8]} />
-        <meshStandardMaterial color={RED} roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[frameW/2 + 0.2, frameH/2, -0.35]} rotation={[0, 0, -0.18]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, frameH, 8]} />
-        <meshStandardMaterial color={RED} roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[frameW/2 + 0.2, frameH/2, 0.35]} rotation={[0, 0, -0.18]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, frameH, 8]} />
-        <meshStandardMaterial color={RED} roughness={0.6} metalness={0.2} />
-      </mesh>
+      <mesh position={[-frameW/2 - 0.2, frameH/2, -0.35]} rotation={[0, 0,  0.18]} castShadow geometry={geomAFrame} material={matRed} />
+      <mesh position={[-frameW/2 - 0.2, frameH/2, 0.35]} rotation={[0, 0,  0.18]} castShadow geometry={geomAFrame} material={matRed} />
+      <mesh position={[frameW/2 + 0.2, frameH/2, -0.35]} rotation={[0, 0, -0.18]} castShadow geometry={geomAFrame} material={matRed} />
+      <mesh position={[frameW/2 + 0.2, frameH/2, 0.35]} rotation={[0, 0, -0.18]} castShadow geometry={geomAFrame} material={matRed} />
       {/* Top horizontal bar */}
-      <mesh position={[0, frameH, 0]} castShadow>
-        <boxGeometry args={[frameW + 0.8, 0.14, 0.14]} />
-        <meshStandardMaterial color={RED} roughness={0.55} metalness={0.25} />
-      </mesh>
+      <mesh position={[0, frameH, 0]} castShadow geometry={geomSwingTop} material={matRed} />
       {/* Swing 1 */}
-      <mesh position={[-1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow>
-        <cylinderGeometry args={[0.025, 0.025, chainH, 6]} />
-        <meshStandardMaterial color="#606060" roughness={0.5} metalness={0.7} />
-      </mesh>
-      <mesh position={[-1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow>
-        <cylinderGeometry args={[0.025, 0.025, chainH, 6]} />
-        <meshStandardMaterial color="#606060" roughness={0.5} metalness={0.7} />
-      </mesh>
-      <mesh position={[-1.1, frameH - chainH - 0.1, 0]} castShadow>
-        <boxGeometry args={[0.42, 0.07, 0.55]} />
-        <meshStandardMaterial color={BLUE} roughness={0.7} />
-      </mesh>
+      <mesh position={[-1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow geometry={geomSwingChain} material={matChain} />
+      <mesh position={[-1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow geometry={geomSwingChain} material={matChain} />
+      <mesh position={[-1.1, frameH - chainH - 0.1, 0]} castShadow geometry={geomSwingSeat} material={matBlue} />
       {/* Swing 2 */}
-      <mesh position={[1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow>
-        <cylinderGeometry args={[0.025, 0.025, chainH, 6]} />
-        <meshStandardMaterial color="#606060" roughness={0.5} metalness={0.7} />
-      </mesh>
-      <mesh position={[1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow>
-        <cylinderGeometry args={[0.025, 0.025, chainH, 6]} />
-        <meshStandardMaterial color="#606060" roughness={0.5} metalness={0.7} />
-      </mesh>
-      <mesh position={[1.1, frameH - chainH - 0.1, 0]} castShadow>
-        <boxGeometry args={[0.42, 0.07, 0.55]} />
-        <meshStandardMaterial color={YELLOW} roughness={0.7} />
-      </mesh>
+      <mesh position={[1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow geometry={geomSwingChain} material={matChain} />
+      <mesh position={[1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow geometry={geomSwingChain} material={matChain} />
+      <mesh position={[1.1, frameH - chainH - 0.1, 0]} castShadow geometry={geomSwingSeat} material={matYellow} />
     </group>
   );
 }
@@ -138,38 +134,24 @@ function SeeSaw({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
     <group position={[x, 0, z]} rotation={[0, ry, 0]}>
       {/* Fulcrum */}
-      <mesh position={[0, 0.35, 0]} castShadow>
-        <cylinderGeometry args={[0.12, 0.16, 0.7, 8]} />
-        <meshStandardMaterial color="#888" roughness={0.7} metalness={0.3} />
-      </mesh>
+      <mesh position={[0, 0.35, 0]} castShadow geometry={geomFulcrumCyl} material={matFulcrum} />
       {/* Plank */}
-      <mesh position={[0, 0.72, 0]} rotation={[0, 0, 0.15]} castShadow>
-        <boxGeometry args={[3.0, 0.1, 0.3]} />
-        <meshStandardMaterial color={RED} roughness={0.65} />
-      </mesh>
+      <mesh position={[0, 0.72, 0]} rotation={[0, 0, 0.15]} castShadow geometry={geomPlank} material={matRed} />
       {/* Handles */}
       {[-1.3, 1.3].map((ox, i) => (
-        <mesh key={i} position={[ox, 0.88, 0]} castShadow>
-          <cylinderGeometry args={[0.04, 0.04, 0.3, 6]} />
-          <meshStandardMaterial color={YELLOW} roughness={0.6} metalness={0.2} />
-        </mesh>
+        <mesh key={i} position={[ox, 0.88, 0]} castShadow geometry={geomHandle} material={matYellow} />
       ))}
     </group>
   );
 }
 
+// Tree with dynamic scaling but shared geometry
 function ParkTree({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
-  const trunkH = 1.2 * scale;
+  const trunkH = 1.2; // base height
   return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, trunkH / 2, 0]} castShadow>
-        <cylinderGeometry args={[0.15 * scale, 0.2 * scale, trunkH, 6]} />
-        <meshStandardMaterial color={WOOD} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, trunkH + 0.8 * scale, 0]} castShadow>
-        <sphereGeometry args={[1.2 * scale, 7, 7]} />
-        <meshStandardMaterial color={LEAVES} roughness={0.9} />
-      </mesh>
+    <group position={[x, 0, z]} scale={scale}>
+      <mesh position={[0, trunkH / 2, 0]} castShadow geometry={geomTrunk} material={matWood} />
+      <mesh position={[0, trunkH + 0.8, 0]} castShadow geometry={geomLeaves} material={matLeaves} />
     </group>
   );
 }
@@ -178,21 +160,12 @@ function ParkBench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   return (
     <group position={[x, 0.25, z]} rotation={[0, ry, 0]} castShadow>
       {/* Seat */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[1.5, 0.08, 0.4]} />
-        <meshStandardMaterial color={WOOD} roughness={0.8} />
-      </mesh>
+      <mesh position={[0, 0, 0]} geometry={geomBenchSeat} material={matWood} />
       {/* Backrest */}
-      <mesh position={[0, 0.4, -0.2]} rotation={[0.2, 0, 0]}>
-        <boxGeometry args={[1.5, 0.4, 0.05]} />
-        <meshStandardMaterial color={WOOD} roughness={0.8} />
-      </mesh>
+      <mesh position={[0, 0.4, -0.2]} rotation={[0.2, 0, 0]} geometry={geomBenchBack} material={matWood} />
       {/* Legs */}
       {[-0.6, 0.6].map((ox, i) => (
-        <mesh key={i} position={[ox, -0.125, 0]}>
-          <boxGeometry args={[0.08, 0.25, 0.3]} />
-          <meshStandardMaterial color="#222" roughness={0.8} metalness={0.8} />
-        </mesh>
+        <mesh key={i} position={[ox, -0.125, 0]} geometry={geomBenchLeg} material={matBenchLegs} />
       ))}
     </group>
   );
@@ -204,8 +177,8 @@ export default function EntrancePark() {
   const D = 37.65;
   const extrudeDepth = 0.1;
 
-  // Generate Base Ground Mesh
-  const { groundGeom, pathGeom } = useMemo(() => {
+  // Shared Base Ground Geometries (Generated once per component lifecycle, could also be global if W and D are fixed)
+  const { groundGeom, pathGeom, innerPathGeom, rubberGeom, sandGeom } = useMemo(() => {
     // 1. Base Ground (Grass)
     const shape = new THREE.Shape();
     shape.moveTo(0, 0);
@@ -236,95 +209,52 @@ export default function EntrancePark() {
     hole.lineTo(2.5, 2.5);
     pathShape.holes.push(hole);
 
-    // Cross path connecting east-west
-    const crossPath = new THREE.Shape();
-    crossPath.moveTo(1, D / 2 - 1);
-    crossPath.lineTo(W - 1, D / 2 - 1);
-    crossPath.lineTo(W - 1, D / 2 + 1);
-    crossPath.lineTo(1, D / 2 + 1);
-    crossPath.lineTo(1, D / 2 - 1);
-
-    // Combine paths (we can render cross path as a separate mesh for simplicity)
     const pathG = new THREE.ExtrudeGeometry(pathShape, { steps: 1, depth: extrudeDepth + 0.02, bevelEnabled: false });
-    const crossPathG = new THREE.ExtrudeGeometry(crossPath, { steps: 1, depth: extrudeDepth + 0.02, bevelEnabled: false });
 
-    return { groundGeom: ground, pathGeom: pathG, crossPathGeom: crossPathG };
-  }, [W, D]);
+    // Inner paths, rubber, sand
+    const innerPath = new THREE.BoxGeometry(W - 5, 3, 0.02);
+    const rubber = new THREE.BoxGeometry(W - 7, D * 0.4, 0.02);
+    const sand = new THREE.BoxGeometry(W - 10, D * 0.25, 0.02);
+
+    return { groundGeom: ground, pathGeom: pathG, innerPathGeom: innerPath, rubberGeom: rubber, sandGeom: sand };
+  }, []);
 
   // Trees array along the perimeter
   const trees = useMemo(() => {
     const t = [];
     for (let x = 1.5; x < W; x += 4) {
-      t.push({ x, z: 1.5 });
-      t.push({ x, z: D - 1.5 });
+      t.push({ x, z: 1.5, scale: 0.8 + Math.random() * 0.4 });
+      t.push({ x, z: D - 1.5, scale: 0.8 + Math.random() * 0.4 });
     }
     for (let z = 5.5; z < D - 4; z += 5) {
-      t.push({ x: 1.5, z });
-      t.push({ x: W - 1.5, z });
+      t.push({ x: 1.5, z, scale: 0.8 + Math.random() * 0.4 });
+      t.push({ x: W - 1.5, z, scale: 0.8 + Math.random() * 0.4 });
     }
     return t;
-  }, [W, D]);
+  }, []);
 
   return (
     <group>
       {/* Grass Ground */}
-      <mesh geometry={groundGeom} receiveShadow>
-        <meshStandardMaterial color={GRASS} roughness={0.85} metalness={0.05} />
-      </mesh>
+      <mesh geometry={groundGeom} receiveShadow material={matGrass} />
 
       {/* Pathways */}
-      <mesh geometry={pathGeom} receiveShadow>
-        <meshStandardMaterial color={PATH} roughness={0.9} />
-      </mesh>
+      <mesh geometry={pathGeom} receiveShadow material={matPath} />
       
-      <mesh receiveShadow position={[0,0,0]}>
-        <shapeGeometry args={[
-          new THREE.Shape([
-            new THREE.Vector2(1, D/2 - 1.5), new THREE.Vector2(W-1, D/2 - 1.5),
-            new THREE.Vector2(W-1, D/2 + 1.5), new THREE.Vector2(1, D/2 + 1.5)
-          ])
-        ]} />
-        {/* We need to raise this slightly to avoid z-fighting, or better yet, use ExtrudeGeometry */}
+      <mesh receiveShadow position={[0,0,0]} material={matGrass}>
+        {/* Placeholder ShapeGeometry handled previously - removed in favor of simpler structures */}
       </mesh>
 
-      {/* Since ShapeGeometry lays flat, let's just use simple BoxGeometry for inner paths to avoid complex Shape logic */}
-      <mesh position={[W/2, D/2, extrudeDepth + 0.01]} receiveShadow>
-         <boxGeometry args={[W - 5, 3, 0.02]} />
-         <meshStandardMaterial color={PATH} roughness={0.9} />
-      </mesh>
+      {/* Cross Path */}
+      <mesh position={[W/2, D/2, extrudeDepth + 0.01]} receiveShadow geometry={innerPathGeom} material={matPath} />
 
       {/* Rubber Play Area (Top Half) */}
-      <mesh position={[W/2, D * 0.75, extrudeDepth + 0.015]} receiveShadow>
-        <boxGeometry args={[W - 7, D * 0.4, 0.02]} />
-        <meshStandardMaterial color={RUBBER} roughness={0.9} />
-      </mesh>
+      <mesh position={[W/2, D * 0.75, extrudeDepth + 0.015]} receiveShadow geometry={rubberGeom} material={matRubber} />
 
       {/* Sandbox (Bottom Half) */}
-      <mesh position={[W/2, D * 0.25, extrudeDepth + 0.015]} receiveShadow>
-        <boxGeometry args={[W - 10, D * 0.25, 0.02]} />
-        <meshStandardMaterial color={SAND} roughness={0.95} />
-      </mesh>
+      <mesh position={[W/2, D * 0.25, extrudeDepth + 0.015]} receiveShadow geometry={sandGeom} material={matSand} />
 
-      {/* Play Equipment (Placed on Rubber Area) */}
-      {/* We are drawing in X-Y plane (2D) because ParksAndCASite rotates the whole group by -Math.PI/2 to lay it flat on X-Z.
-          Wait! ParksAndCASite renders the 2D shapes in X-Y, and rotates the entire `<group rotation={[-Math.PI / 2, 0, 0]}>`.
-          Therefore, inside EntrancePark, Z is actually "UP" in 3D world space (height), and Y is "DEPTH" in 2D space.
-          Our PlayStructures use Y for height and Z for depth!
-          To fix this, we can place PlayEquipment inside a group that undoes the rotation, or we can just rotate the equipment group. */}
-      
       <group position={[0, 0, extrudeDepth]} rotation={[Math.PI / 2, 0, 0]}>
-        {/* Now Y is UP, Z is DEPTH. 
-            The Park goes from X=0 to 27, and Z goes from 0 to -37.65 because the parent group rotated X-Y plane.
-            Let's trace it: Parent has rotation={[-Math.PI/2, 0, 0]}. 
-            In Parent: X is World X. Y is World -Z. Z is World Y (Up).
-            If we apply rotation={[Math.PI/2, 0, 0]} to this child group:
-            Child X = Parent X = World X.
-            Child Y = Parent Z = World Y.
-            Child Z = -Parent Y = World Z.
-            This perfectly restores standard 3D coordinates! 
-            So: X is 0 to 27. Z is 0 to 37.65 (Wait, Parent Y was 0 to 37.65. So Child Z is -37.65 to 0. Let's use Z = -D to 0)
-        */}
-        
         {/* Play Structure */}
         <PlayStructure x={W/2 - 4} z={-(D * 0.75)} />
         
@@ -335,14 +265,8 @@ export default function EntrancePark() {
         <SeeSaw x={W/2} z={-(D * 0.65)} />
 
         {/* Sand Toys / Blocks in Sandbox */}
-        <mesh position={[W/2 - 2, 0.2, -(D * 0.25)]} castShadow>
-          <boxGeometry args={[0.8, 0.4, 0.8]} />
-          <meshStandardMaterial color={RED} roughness={0.8} />
-        </mesh>
-        <mesh position={[W/2 + 2, 0.15, -(D * 0.25 + 1)]} castShadow>
-          <cylinderGeometry args={[0.3, 0.3, 0.3, 16]} />
-          <meshStandardMaterial color={YELLOW} roughness={0.8} />
-        </mesh>
+        <mesh position={[W/2 - 2, 0.2, -(D * 0.25)]} castShadow geometry={geomSandBoxCube} material={matRed} />
+        <mesh position={[W/2 + 2, 0.15, -(D * 0.25 + 1)]} castShadow geometry={geomSandCyl} material={matYellow} />
 
         {/* Benches */}
         <ParkBench x={3.5} z={-(D * 0.5)} ry={Math.PI / 2} />
@@ -352,7 +276,7 @@ export default function EntrancePark() {
 
         {/* Trees */}
         {trees.map((t, i) => (
-          <ParkTree key={i} x={t.x} z={-t.z} scale={0.8 + Math.random() * 0.4} />
+          <ParkTree key={i} x={t.x} z={-t.z} scale={t.scale} />
         ))}
       </group>
     </group>
