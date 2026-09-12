@@ -1,283 +1,320 @@
+/**
+ * EntrancePark.tsx — Children's Park (Entrance-Side)
+ *
+ * Mobile-first design:
+ *  - All materials declared ONCE at module level (shared across all instances)
+ *  - All repeated geometries declared ONCE at module level (shared via geometry prop)
+ *  - Components use <mesh geometry={...} material={...}> for zero-duplicate GPU allocations
+ *  - Low-poly counts on all curved shapes (5–6 segments max)
+ *  - No animations, no particles, no transparency, no heavy shaders
+ *  - castShadow limited to tall/visible structures only
+ *  - Total target: <60 draw calls for the entire park
+ */
+
 import { useMemo } from 'react';
 import * as THREE from 'three';
 
-// ── Colors ────────────────────────
-const GRASS    = '#4caf50';
-const PATH     = '#cfd8dc';
-const RUBBER   = '#d07840';
-const SAND     = '#e0c890';
-const BLUE     = '#2060c8';
-const RED      = '#c82828';
-const YELLOW   = '#e8c020';
-const PLATFORM = '#3070b8';
-const RAIL     = '#404040';
-const WOOD     = '#8b5a2b';
-const LEAVES   = '#2e7d32';
+// ── Park dimensions (module-level, used by geometry constants below) ──────────
+const W = 27.0;   // park width  (X)
+const D = 37.65;  // park depth  (Y in 2D / -Z in 3D equipment group)
 
-// ── Shared Global Materials (Mobile Optimization) ────────────────────────
-const matGrass = new THREE.MeshStandardMaterial({ color: GRASS, roughness: 0.85, metalness: 0.05 });
-const matPath = new THREE.MeshStandardMaterial({ color: PATH, roughness: 0.9 });
-const matRubber = new THREE.MeshStandardMaterial({ color: RUBBER, roughness: 0.9 });
-const matSand = new THREE.MeshStandardMaterial({ color: SAND, roughness: 0.95 });
-const matBlue = new THREE.MeshStandardMaterial({ color: BLUE, roughness: 0.6, metalness: 0.2 });
-const matRed = new THREE.MeshStandardMaterial({ color: RED, roughness: 0.6, metalness: 0.15 });
-const matYellow = new THREE.MeshStandardMaterial({ color: YELLOW, roughness: 0.55, metalness: 0.1 });
-const matPlatform = new THREE.MeshStandardMaterial({ color: PLATFORM, roughness: 0.65 });
-const matRail = new THREE.MeshStandardMaterial({ color: RAIL, roughness: 0.7, metalness: 0.4 });
-const matWood = new THREE.MeshStandardMaterial({ color: WOOD, roughness: 0.9 });
-const matLeaves = new THREE.MeshStandardMaterial({ color: LEAVES, roughness: 0.9 });
-const matChain = new THREE.MeshStandardMaterial({ color: "#606060", roughness: 0.5, metalness: 0.7 });
-const matFulcrum = new THREE.MeshStandardMaterial({ color: "#888", roughness: 0.7, metalness: 0.3 });
-const matBenchLegs = new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.8, metalness: 0.8 });
+// ── Module-level materials (allocated ONCE) ───────────────────────────────────
+const MAT_GRASS   = new THREE.MeshStandardMaterial({ color: '#4a8c3f', roughness: 0.9, metalness: 0 });
+const MAT_PATH    = new THREE.MeshStandardMaterial({ color: '#bdbdbd', roughness: 0.9 });
+const MAT_RUBBER  = new THREE.MeshStandardMaterial({ color: '#c8622e', roughness: 0.9 });
+const MAT_SAND    = new THREE.MeshStandardMaterial({ color: '#d4b483', roughness: 0.95 });
+const MAT_BLUE    = new THREE.MeshStandardMaterial({ color: '#1f5db5', roughness: 0.65 });
+const MAT_RED     = new THREE.MeshStandardMaterial({ color: '#b52424', roughness: 0.65 });
+const MAT_YELLOW  = new THREE.MeshStandardMaterial({ color: '#d4aa1a', roughness: 0.6 });
+const MAT_WOOD    = new THREE.MeshStandardMaterial({ color: '#7a4f28', roughness: 0.9 });
+const MAT_LEAVES  = new THREE.MeshStandardMaterial({ color: '#2a6e28', roughness: 0.9 });
+const MAT_METAL   = new THREE.MeshStandardMaterial({ color: '#555555', roughness: 0.5, metalness: 0.7 });
+const MAT_PERGOLA = new THREE.MeshStandardMaterial({ color: '#5a3a18', roughness: 0.85 });
+const MAT_ROOF    = new THREE.MeshStandardMaterial({ color: '#8b6347', roughness: 0.85 });
+const MAT_SLAB    = new THREE.MeshStandardMaterial({ color: '#a0a0a0', roughness: 0.8 });
 
-// ── Shared Global Geometries (Mobile Optimization) ────────────────────────
-// Play Structure
-const geomLeg = new THREE.CylinderGeometry(0.08, 0.09, 2.2, 5); // reduced segments
-const geomPlatform = new THREE.BoxGeometry(1.6, 0.12, 1.6);
-const geomRailSide = new THREE.BoxGeometry(0.08, 0.9, 1.6);
-const geomRailBack = new THREE.BoxGeometry(1.6, 0.9, 0.08);
-const geomRoof = new THREE.ConeGeometry(1.3, 0.9, 4);
-const geomRoofBase = new THREE.BoxGeometry(1.8, 0.1, 1.8);
-const geomSlide = new THREE.BoxGeometry(2.7, 0.1, 0.7);
-const geomSlideRail = new THREE.BoxGeometry(2.7, 0.35, 0.06);
-const geomLadderRail = new THREE.BoxGeometry(0.07, 2.2 * 1.12, 0.07);
-const geomLadderRung = new THREE.BoxGeometry(0.5, 0.05, 0.05);
-
-// Swings
-const geomAFrame = new THREE.CylinderGeometry(0.07, 0.09, 3.2, 5); // reduced
-const geomSwingTop = new THREE.BoxGeometry(4.4, 0.14, 0.14);
-const geomSwingChain = new THREE.CylinderGeometry(0.025, 0.025, 2.5, 4); // reduced
-const geomSwingSeat = new THREE.BoxGeometry(0.42, 0.07, 0.55);
-
-// SeeSaw
-const geomFulcrumCyl = new THREE.CylinderGeometry(0.12, 0.16, 0.7, 6);
-const geomPlank = new THREE.BoxGeometry(3.0, 0.1, 0.3);
-const geomHandle = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 5);
-
+// ── Module-level geometries (allocated ONCE, reused via prop) ─────────────────
 // Tree
-const geomTrunk = new THREE.CylinderGeometry(0.15, 0.2, 1.2, 5);
-const geomLeaves = new THREE.SphereGeometry(1.2, 6, 5); // significantly reduced for mobile
-
+const GEO_TRUNK     = new THREE.CylinderGeometry(0.15, 0.22, 1.4, 5, 1);
+const GEO_LEAVES    = new THREE.SphereGeometry(1.3, 6, 5);
 // Bench
-const geomBenchSeat = new THREE.BoxGeometry(1.5, 0.08, 0.4);
-const geomBenchBack = new THREE.BoxGeometry(1.5, 0.4, 0.05);
-const geomBenchLeg = new THREE.BoxGeometry(0.08, 0.25, 0.3);
+const GEO_BENCH_SEAT = new THREE.BoxGeometry(1.6, 0.1, 0.45);
+const GEO_BENCH_BACK = new THREE.BoxGeometry(1.6, 0.5, 0.08);
+const GEO_BENCH_LEG  = new THREE.BoxGeometry(0.09, 0.38, 0.38);
+// Pergola
+const GEO_PERG_POST  = new THREE.CylinderGeometry(0.15, 0.15, 2.8, 5, 1);
+const GEO_PERG_BEAM  = new THREE.BoxGeometry(7.0, 0.15, 0.2);
+const GEO_PERG_RAFTER = new THREE.BoxGeometry(0.12, 0.12, 6.0);
+const GEO_PERG_ROOF  = new THREE.BoxGeometry(7.0, 0.08, 6.0);
+// Play structure
+const GEO_LEG        = new THREE.CylinderGeometry(0.09, 0.1, 2.4, 5, 1);
+const GEO_PLATFORM   = new THREE.BoxGeometry(1.8, 0.14, 1.8);
+const GEO_RAIL_LONG  = new THREE.BoxGeometry(1.8, 0.8, 0.09);
+const GEO_RAIL_SHORT = new THREE.BoxGeometry(0.09, 0.8, 1.8);
+const GEO_ROOF_CONE  = new THREE.ConeGeometry(1.5, 1.0, 4);
+const GEO_SLIDE      = new THREE.BoxGeometry(3.0, 0.12, 0.75);
+const GEO_SLIDE_RAIL = new THREE.BoxGeometry(3.0, 0.35, 0.07);
+const GEO_LRAIL      = new THREE.BoxGeometry(0.07, 2.8, 0.07);
+const GEO_LRUNG      = new THREE.BoxGeometry(0.48, 0.05, 0.05);
+// Swing set
+const GEO_SF_POST    = new THREE.CylinderGeometry(0.08, 0.09, 3.4, 5, 1);
+const GEO_SF_TOP     = new THREE.BoxGeometry(5.0, 0.15, 0.15);
+const GEO_SF_CHAIN   = new THREE.CylinderGeometry(0.025, 0.025, 2.6, 4, 1);
+const GEO_SF_SEAT    = new THREE.BoxGeometry(0.44, 0.08, 0.55);
+// See-saw
+const GEO_SS_BASE    = new THREE.CylinderGeometry(0.13, 0.18, 0.75, 5, 1);
+const GEO_SS_PLANK   = new THREE.BoxGeometry(3.4, 0.1, 0.32);
+const GEO_SS_HANDLE  = new THREE.CylinderGeometry(0.045, 0.045, 0.35, 5, 1);
+// Sandbox border
+const GEO_SB_EDGE    = new THREE.BoxGeometry(5.0, 0.3, 0.25);
+const GEO_SB_EDGE_S  = new THREE.BoxGeometry(0.25, 0.3, 5.0);
 
-// Sandbox block
-const geomSandBoxCube = new THREE.BoxGeometry(0.8, 0.4, 0.8);
-const geomSandCyl = new THREE.CylinderGeometry(0.3, 0.3, 0.3, 6);
 
+// ── Sub-components ────────────────────────────────────────────────────────────
 
-// ── Components using Shared Resources ────────────────────────
+function Tree({ x, z, s = 1.0 }: { x: number; z: number; s?: number }) {
+  return (
+    <group position={[x, 0, z]} scale={s}>
+      <mesh position={[0, 0.7, 0]} castShadow geometry={GEO_TRUNK} material={MAT_WOOD} />
+      <mesh position={[0, 2.3, 0]} castShadow geometry={GEO_LEAVES} material={MAT_LEAVES} />
+    </group>
+  );
+}
 
-function PlayStructure({ x, z }: { x: number; z: number }) {
-  const platH = 2.2;
+function Bench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
+  return (
+    <group position={[x, 0.38, z]} rotation={[0, ry, 0]}>
+      <mesh position={[0, 0, 0]} geometry={GEO_BENCH_SEAT} material={MAT_WOOD} />
+      <mesh position={[0, 0.3, -0.18]} rotation={[0.2, 0, 0]} geometry={GEO_BENCH_BACK} material={MAT_WOOD} />
+      <mesh position={[-0.65, -0.19, 0]} geometry={GEO_BENCH_LEG} material={MAT_METAL} />
+      <mesh position={[ 0.65, -0.19, 0]} geometry={GEO_BENCH_LEG} material={MAT_METAL} />
+    </group>
+  );
+}
+
+/** Simple 4-post pergola with lattice-style roof */
+function Pergola({ x, z }: { x: number; z: number }) {
+  const pw = 7.0;
+  const pd = 6.0;
+  const ph = 2.8;
+  const hx = pw / 2 - 0.4;
+  const hz = pd / 2 - 0.4;
+
+  // Rafters (4 evenly spaced slats across depth)
+  const rafters = [-2.1, -0.7, 0.7, 2.1];
+
   return (
     <group position={[x, 0, z]}>
-      {/* 4 corner support legs */}
-      {[[-0.7,-0.7],[0.7,-0.7],[-0.7,0.7],[0.7,0.7]].map(([ox,oz],i) => (
-        <mesh key={i} position={[ox, platH/2, oz]} castShadow geometry={geomLeg} material={matBlue} />
+      {/* 4 corner posts */}
+      {[[-hx, -hz], [hx, -hz], [-hx, hz], [hx, hz]].map(([px, pz], i) => (
+        <mesh key={i} position={[px, ph / 2, pz]} castShadow geometry={GEO_PERG_POST} material={MAT_PERGOLA} />
       ))}
-      {/* Platform deck */}
-      <mesh position={[0, platH, 0]} castShadow receiveShadow geometry={geomPlatform} material={matPlatform} />
-      {/* Platform handrail sides */}
-      {[[-0.8, 0], [0.8, 0], [0, -0.8]].map(([rx, rz], i) => (
-        <mesh key={`rail${i}`} position={[rx, platH + 0.45, rz]} castShadow 
-          geometry={rx === 0 ? geomRailBack : geomRailSide} material={matRed} />
+      {/* Two long top beams (along X) */}
+      <mesh position={[0, ph, -hz]} castShadow geometry={GEO_PERG_BEAM} material={MAT_PERGOLA} />
+      <mesh position={[0, ph,  hz]} castShadow geometry={GEO_PERG_BEAM} material={MAT_PERGOLA} />
+      {/* Rafters (along Z) */}
+      {rafters.map((rx, i) => (
+        <mesh key={i} position={[rx, ph + 0.06, 0]} geometry={GEO_PERG_RAFTER} material={MAT_PERGOLA} />
       ))}
-      {/* Pyramid roof/canopy */}
-      <mesh position={[0, platH + 1.35, 0]} castShadow geometry={geomRoof} material={matRed} />
-      <mesh position={[0, platH + 0.9, 0]} castShadow geometry={geomRoofBase} material={matBlue} />
-      {/* SLIDE */}
-      <mesh position={[1.5, platH * 0.45, 0.3]} rotation={[0, 0.15, -Math.PI / 6]} castShadow geometry={geomSlide} material={matYellow} />
-      {/* Slide side rails */}
-      {[-0.36, 0.36].map((oz, i) => (
-        <mesh key={`sr${i}`} position={[1.5, platH * 0.45 + 0.22, 0.3 + oz]} rotation={[0, 0.15, -Math.PI / 6]} castShadow geometry={geomSlideRail} material={matYellow} />
+      {/* Thin translucent-looking roof slab (solid, low opacity hint via roughness) */}
+      <mesh position={[0, ph + 0.12, 0]} geometry={GEO_PERG_ROOF} material={MAT_ROOF} />
+    </group>
+  );
+}
+
+/** Compact play tower with slide */
+function PlayStructure({ x, z }: { x: number; z: number }) {
+  const ph = 2.4; // platform height
+  return (
+    <group position={[x, 0, z]}>
+      {/* 4 support legs */}
+      {[[-0.75,-0.75],[0.75,-0.75],[-0.75,0.75],[0.75,0.75]].map(([lx, lz], i) => (
+        <mesh key={i} position={[lx, ph / 2, lz]} castShadow geometry={GEO_LEG} material={MAT_BLUE} />
       ))}
-      {/* LADDER */}
-      {[-0.22, 0.22].map((ox, i) => (
-        <mesh key={`lr${i}`} position={[-0.7 + ox, platH / 2, -1.1]} rotation={[-Math.PI / 5.5, 0, 0]} castShadow geometry={geomLadderRail} material={matRail} />
-      ))}
-      {[0.3, 0.55, 0.8, 1.05, 1.3, 1.55, 1.8].map((yOff, i) => (
-        <mesh key={`rng${i}`} position={[-0.7, yOff, -1.1 - (yOff / platH) * 0.5]} castShadow geometry={geomLadderRung} material={matRail} />
+      {/* Platform */}
+      <mesh position={[0, ph, 0]} geometry={GEO_PLATFORM} material={MAT_BLUE} />
+      {/* Handrails */}
+      <mesh position={[0, ph + 0.5, -0.9]} geometry={GEO_RAIL_LONG}  material={MAT_RED} />
+      <mesh position={[0, ph + 0.5,  0.9]} geometry={GEO_RAIL_LONG}  material={MAT_RED} />
+      <mesh position={[-0.9, ph + 0.5, 0]} geometry={GEO_RAIL_SHORT} material={MAT_RED} />
+      {/* Cone roof */}
+      <mesh position={[0, ph + 1.5, 0]} castShadow geometry={GEO_ROOF_CONE} material={MAT_RED} />
+      {/* Slide */}
+      <mesh position={[2.0, ph * 0.45, 0]} rotation={[0, 0.1, -Math.PI / 6]} castShadow geometry={GEO_SLIDE}      material={MAT_YELLOW} />
+      <mesh position={[2.0, ph * 0.45 + 0.22, -0.38]} rotation={[0, 0.1, -Math.PI / 6]} geometry={GEO_SLIDE_RAIL} material={MAT_YELLOW} />
+      <mesh position={[2.0, ph * 0.45 + 0.22,  0.38]} rotation={[0, 0.1, -Math.PI / 6]} geometry={GEO_SLIDE_RAIL} material={MAT_YELLOW} />
+      {/* Ladder rails */}
+      <mesh position={[-0.72, ph / 2, -1.2]} rotation={[-0.55, 0, 0]} geometry={GEO_LRAIL} material={MAT_METAL} />
+      <mesh position={[-0.28, ph / 2, -1.2]} rotation={[-0.55, 0, 0]} geometry={GEO_LRAIL} material={MAT_METAL} />
+      {/* Ladder rungs (4 only) */}
+      {[0.45, 0.85, 1.25, 1.65].map((y, i) => (
+        <mesh key={i} position={[-0.5, y, -1.2 - y * 0.18]} geometry={GEO_LRUNG} material={MAT_METAL} />
       ))}
     </group>
   );
 }
 
+/** A-frame swing set with 2 swings */
 function SwingSet({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
-  const frameH  = 3.2;
-  const frameW  = 3.6;
-  const chainH  = 2.5;
+  const fh = 3.4;
+  const fw = 4.4;
+  const ch = 2.6;
   return (
     <group position={[x, 0, z]} rotation={[0, ry, 0]}>
-      {/* A-frames */}
-      <mesh position={[-frameW/2 - 0.2, frameH/2, -0.35]} rotation={[0, 0,  0.18]} castShadow geometry={geomAFrame} material={matRed} />
-      <mesh position={[-frameW/2 - 0.2, frameH/2, 0.35]} rotation={[0, 0,  0.18]} castShadow geometry={geomAFrame} material={matRed} />
-      <mesh position={[frameW/2 + 0.2, frameH/2, -0.35]} rotation={[0, 0, -0.18]} castShadow geometry={geomAFrame} material={matRed} />
-      <mesh position={[frameW/2 + 0.2, frameH/2, 0.35]} rotation={[0, 0, -0.18]} castShadow geometry={geomAFrame} material={matRed} />
-      {/* Top horizontal bar */}
-      <mesh position={[0, frameH, 0]} castShadow geometry={geomSwingTop} material={matRed} />
-      {/* Swing 1 */}
-      <mesh position={[-1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow geometry={geomSwingChain} material={matChain} />
-      <mesh position={[-1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow geometry={geomSwingChain} material={matChain} />
-      <mesh position={[-1.1, frameH - chainH - 0.1, 0]} castShadow geometry={geomSwingSeat} material={matBlue} />
-      {/* Swing 2 */}
-      <mesh position={[1.1, frameH - chainH/2 - 0.05, -0.25]} castShadow geometry={geomSwingChain} material={matChain} />
-      <mesh position={[1.1, frameH - chainH/2 - 0.05, 0.25]} castShadow geometry={geomSwingChain} material={matChain} />
-      <mesh position={[1.1, frameH - chainH - 0.1, 0]} castShadow geometry={geomSwingSeat} material={matYellow} />
+      {/* A-frame posts (4) */}
+      <mesh position={[-fw/2, fh/2, -0.38]} rotation={[0,0, 0.18]} castShadow geometry={GEO_SF_POST} material={MAT_RED} />
+      <mesh position={[-fw/2, fh/2,  0.38]} rotation={[0,0, 0.18]} castShadow geometry={GEO_SF_POST} material={MAT_RED} />
+      <mesh position={[ fw/2, fh/2, -0.38]} rotation={[0,0,-0.18]} castShadow geometry={GEO_SF_POST} material={MAT_RED} />
+      <mesh position={[ fw/2, fh/2,  0.38]} rotation={[0,0,-0.18]} castShadow geometry={GEO_SF_POST} material={MAT_RED} />
+      {/* Top bar */}
+      <mesh position={[0, fh, 0]} geometry={GEO_SF_TOP} material={MAT_RED} />
+      {/* Swing 1 — chains + seat */}
+      <mesh position={[-1.2, fh - ch/2, -0.28]} geometry={GEO_SF_CHAIN} material={MAT_METAL} />
+      <mesh position={[-1.2, fh - ch/2,  0.28]} geometry={GEO_SF_CHAIN} material={MAT_METAL} />
+      <mesh position={[-1.2, fh - ch - 0.1, 0]} geometry={GEO_SF_SEAT} material={MAT_BLUE} />
+      {/* Swing 2 — chains + seat */}
+      <mesh position={[ 1.2, fh - ch/2, -0.28]} geometry={GEO_SF_CHAIN} material={MAT_METAL} />
+      <mesh position={[ 1.2, fh - ch/2,  0.28]} geometry={GEO_SF_CHAIN} material={MAT_METAL} />
+      <mesh position={[ 1.2, fh - ch - 0.1, 0]} geometry={GEO_SF_SEAT} material={MAT_YELLOW} />
     </group>
   );
 }
 
-function SeeSaw({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
+/** Simple teeter-totter */
+function SeeSaw({ x, z }: { x: number; z: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
-      {/* Fulcrum */}
-      <mesh position={[0, 0.35, 0]} castShadow geometry={geomFulcrumCyl} material={matFulcrum} />
-      {/* Plank */}
-      <mesh position={[0, 0.72, 0]} rotation={[0, 0, 0.15]} castShadow geometry={geomPlank} material={matRed} />
-      {/* Handles */}
-      {[-1.3, 1.3].map((ox, i) => (
-        <mesh key={i} position={[ox, 0.88, 0]} castShadow geometry={geomHandle} material={matYellow} />
-      ))}
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.38, 0]} geometry={GEO_SS_BASE}  material={MAT_SLAB} />
+      <mesh position={[0, 0.76, 0]} rotation={[0, 0, 0.14]} geometry={GEO_SS_PLANK} material={MAT_RED} />
+      <mesh position={[-1.55, 0.9, 0]} geometry={GEO_SS_HANDLE} material={MAT_YELLOW} />
+      <mesh position={[ 1.55, 0.9, 0]} geometry={GEO_SS_HANDLE} material={MAT_YELLOW} />
     </group>
   );
 }
 
-// Tree with dynamic scaling but shared geometry
-function ParkTree({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
-  const trunkH = 1.2; // base height
+/** Sandbox with raised timber border */
+function Sandbox({ x, z }: { x: number; z: number }) {
+  const bh = 0.3;
   return (
-    <group position={[x, 0, z]} scale={scale}>
-      <mesh position={[0, trunkH / 2, 0]} castShadow geometry={geomTrunk} material={matWood} />
-      <mesh position={[0, trunkH + 0.8, 0]} castShadow geometry={geomLeaves} material={matLeaves} />
+    <group position={[x, 0, z]}>
+      {/* Sand fill — rendered in parent 2D space, so this is handled by ground-layer boxes.
+          Here we only render the timber border frame visible in 3D */}
+      <mesh position={[0,   bh/2,  2.35]} geometry={GEO_SB_EDGE}   material={MAT_WOOD} />
+      <mesh position={[0,   bh/2, -2.35]} geometry={GEO_SB_EDGE}   material={MAT_WOOD} />
+      <mesh position={[-2.35, bh/2, 0]}   geometry={GEO_SB_EDGE_S} material={MAT_WOOD} />
+      <mesh position={[ 2.35, bh/2, 0]}   geometry={GEO_SB_EDGE_S} material={MAT_WOOD} />
     </group>
   );
 }
 
-function ParkBench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
-  return (
-    <group position={[x, 0.25, z]} rotation={[0, ry, 0]} castShadow>
-      {/* Seat */}
-      <mesh position={[0, 0, 0]} geometry={geomBenchSeat} material={matWood} />
-      {/* Backrest */}
-      <mesh position={[0, 0.4, -0.2]} rotation={[0.2, 0, 0]} geometry={geomBenchBack} material={matWood} />
-      {/* Legs */}
-      {[-0.6, 0.6].map((ox, i) => (
-        <mesh key={i} position={[ox, -0.125, 0]} geometry={geomBenchLeg} material={matBenchLegs} />
-      ))}
-    </group>
-  );
-}
 
-// ── Main Entrance Park Component ──────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function EntrancePark() {
-  const W = 27.0;
-  const D = 37.65;
-  const extrudeDepth = 0.1;
 
-  // Shared Base Ground Geometries (Generated once per component lifecycle, could also be global if W and D are fixed)
-  const { groundGeom, pathGeom, innerPathGeom, rubberGeom, sandGeom } = useMemo(() => {
-    // 1. Base Ground (Grass)
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(W, 0);
-    shape.lineTo(W, D);
-    shape.lineTo(0, D);
-    shape.lineTo(0, 0);
-    
-    const ground = new THREE.ExtrudeGeometry(shape, {
-      steps: 1, depth: extrudeDepth, bevelEnabled: true, bevelThickness: 0.2, bevelSize: 0.2, bevelSegments: 2
-    });
+  // ── Flat ground-layer geometry (2D X-Y coordinate space) ──────────────────
+  const groundGeoms = useMemo(() => {
+    const ext = (shape: THREE.Shape, depth = 0.1, bevel = false) =>
+      new THREE.ExtrudeGeometry(shape, { steps: 1, depth, bevelEnabled: bevel, bevelThickness: 0.2, bevelSize: 0.2, bevelSegments: 1 });
 
-    // 2. Walkway Paths (Concrete/Paved)
-    const pathShape = new THREE.Shape();
-    // Perimeter path (1.5m wide)
-    pathShape.moveTo(1, 1);
-    pathShape.lineTo(W - 1, 1);
-    pathShape.lineTo(W - 1, D - 1);
-    pathShape.lineTo(1, D - 1);
-    pathShape.lineTo(1, 1);
-    
-    // Create hole for the central grass/play areas
-    const hole = new THREE.Path();
-    hole.moveTo(2.5, 2.5);
-    hole.lineTo(2.5, D - 2.5);
-    hole.lineTo(W - 2.5, D - 2.5);
-    hole.lineTo(W - 2.5, 2.5);
-    hole.lineTo(2.5, 2.5);
-    pathShape.holes.push(hole);
+    // 1. Full grass base
+    const grassShape = new THREE.Shape();
+    grassShape.moveTo(0, 0); grassShape.lineTo(W, 0);
+    grassShape.lineTo(W, D); grassShape.lineTo(0, D);
+    grassShape.lineTo(0, 0);
 
-    const pathG = new THREE.ExtrudeGeometry(pathShape, { steps: 1, depth: extrudeDepth + 0.02, bevelEnabled: false });
+    // 2. Perimeter path (annular — 1.5m wide ring), with central hole
+    const pathRing = new THREE.Shape();
+    pathRing.moveTo(0.5, 0.5); pathRing.lineTo(W-0.5, 0.5);
+    pathRing.lineTo(W-0.5, D-0.5); pathRing.lineTo(0.5, D-0.5); pathRing.lineTo(0.5, 0.5);
+    const pathHole = new THREE.Path();
+    pathHole.moveTo(2.0, 2.0); pathHole.lineTo(W-2.0, 2.0);
+    pathHole.lineTo(W-2.0, D-2.0); pathHole.lineTo(2.0, D-2.0); pathHole.lineTo(2.0, 2.0);
+    pathRing.holes.push(pathHole);
 
-    // Inner paths, rubber, sand
-    const innerPath = new THREE.BoxGeometry(W - 5, 3, 0.02);
-    const rubber = new THREE.BoxGeometry(W - 7, D * 0.4, 0.02);
-    const sand = new THREE.BoxGeometry(W - 10, D * 0.25, 0.02);
+    // 3. Center spine path (vertical strip)
+    const spineX = W / 2;
+    const spineShape = new THREE.Shape();
+    spineShape.moveTo(spineX-1.0, 2.0); spineShape.lineTo(spineX+1.0, 2.0);
+    spineShape.lineTo(spineX+1.0, D-2.0); spineShape.lineTo(spineX-1.0, D-2.0);
+    spineShape.lineTo(spineX-1.0, 2.0);
 
-    return { groundGeom: ground, pathGeom: pathG, innerPathGeom: innerPath, rubberGeom: rubber, sandGeom: sand };
+    // 4. Rubber play surface (upper zone)
+    const rubberShape = new THREE.Shape();
+    rubberShape.moveTo(3.5, D*0.55); rubberShape.lineTo(W-3.5, D*0.55);
+    rubberShape.lineTo(W-3.5, D-3.5); rubberShape.lineTo(3.5, D-3.5);
+    rubberShape.lineTo(3.5, D*0.55);
+
+    // 5. Sand box fill (lower-mid zone)
+    const sandShape = new THREE.Shape();
+    sandShape.moveTo(W/2-2.2, D*0.2); sandShape.lineTo(W/2+2.2, D*0.2);
+    sandShape.lineTo(W/2+2.2, D*0.2+4.4); sandShape.lineTo(W/2-2.2, D*0.2+4.4);
+    sandShape.lineTo(W/2-2.2, D*0.2);
+
+    return {
+      grass:  ext(grassShape, 0.1, true),
+      path:   ext(pathRing,   0.14, false),
+      spine:  ext(spineShape, 0.14, false),
+      rubber: ext(rubberShape, 0.16, false),
+      sand:   ext(sandShape,  0.18, false),
+    };
   }, []);
 
-  // Trees array along the perimeter
-  const trees = useMemo(() => {
-    const t = [];
-    for (let x = 1.5; x < W; x += 4) {
-      t.push({ x, z: 1.5, scale: 0.8 + Math.random() * 0.4 });
-      t.push({ x, z: D - 1.5, scale: 0.8 + Math.random() * 0.4 });
-    }
-    for (let z = 5.5; z < D - 4; z += 5) {
-      t.push({ x: 1.5, z, scale: 0.8 + Math.random() * 0.4 });
-      t.push({ x: W - 1.5, z, scale: 0.8 + Math.random() * 0.4 });
-    }
-    return t;
+  // Pre-computed tree positions (stable, no per-render random)
+  const treePositions = useMemo<Array<{ x: number; z: number; s: number }>>(() => {
+    const trees: Array<{ x: number; z: number; s: number }> = [];
+    const scales = [0.9, 1.0, 0.85, 1.05, 0.95, 0.9, 1.0, 0.85, 0.95, 1.05, 0.9, 0.85];
+    let si = 0;
+    // Bottom edge trees
+    for (let x = 2.5; x < W; x += 5.5) { trees.push({ x, z: 1.5, s: scales[si++ % scales.length] }); }
+    // Top edge trees
+    for (let x = 2.5; x < W; x += 5.5) { trees.push({ x, z: D - 1.5, s: scales[si++ % scales.length] }); }
+    // Left edge trees
+    for (let z = 7.0; z < D - 6.0; z += 7.0) { trees.push({ x: 1.5, z, s: scales[si++ % scales.length] }); }
+    // Right edge trees
+    for (let z = 7.0; z < D - 6.0; z += 7.0) { trees.push({ x: W - 1.5, z, s: scales[si++ % scales.length] }); }
+    return trees;
   }, []);
 
   return (
     <group>
-      {/* Grass Ground */}
-      <mesh geometry={groundGeom} receiveShadow material={matGrass} />
+      {/* ── Flat ground layers (2D, laid by parent rotation) ─────────────── */}
+      <mesh geometry={groundGeoms.grass}  material={MAT_GRASS} receiveShadow />
+      <mesh geometry={groundGeoms.path}   material={MAT_PATH}  receiveShadow />
+      <mesh geometry={groundGeoms.spine}  material={MAT_PATH}  receiveShadow />
+      <mesh geometry={groundGeoms.rubber} material={MAT_RUBBER} receiveShadow />
+      <mesh geometry={groundGeoms.sand}   material={MAT_SAND}  receiveShadow />
 
-      {/* Pathways */}
-      <mesh geometry={pathGeom} receiveShadow material={matPath} />
-      
-      <mesh receiveShadow position={[0,0,0]} material={matGrass}>
-        {/* Placeholder ShapeGeometry handled previously - removed in favor of simpler structures */}
-      </mesh>
+      {/* ── 3D equipment group (rotation restores standard Y-up orientation) */}
+      <group position={[0, 0, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+        {/*
+          Coordinate space:
+            X: 0 → W (27m), left → right
+            Z: 0 → -D (-37.65m), bottom-entry → top
+            Y: up (world height)
+        */}
 
-      {/* Cross Path */}
-      <mesh position={[W/2, D/2, extrudeDepth + 0.01]} receiveShadow geometry={innerPathGeom} material={matPath} />
-
-      {/* Rubber Play Area (Top Half) */}
-      <mesh position={[W/2, D * 0.75, extrudeDepth + 0.015]} receiveShadow geometry={rubberGeom} material={matRubber} />
-
-      {/* Sandbox (Bottom Half) */}
-      <mesh position={[W/2, D * 0.25, extrudeDepth + 0.015]} receiveShadow geometry={sandGeom} material={matSand} />
-
-      <group position={[0, 0, extrudeDepth]} rotation={[Math.PI / 2, 0, 0]}>
-        {/* Play Structure */}
-        <PlayStructure x={W/2 - 4} z={-(D * 0.75)} />
-        
-        {/* Swing Set */}
-        <SwingSet x={W/2 + 5} z={-(D * 0.75)} ry={Math.PI / 4} />
-        
-        {/* SeeSaw */}
-        <SeeSaw x={W/2} z={-(D * 0.65)} />
-
-        {/* Sand Toys / Blocks in Sandbox */}
-        <mesh position={[W/2 - 2, 0.2, -(D * 0.25)]} castShadow geometry={geomSandBoxCube} material={matRed} />
-        <mesh position={[W/2 + 2, 0.15, -(D * 0.25 + 1)]} castShadow geometry={geomSandCyl} material={matYellow} />
-
-        {/* Benches */}
-        <ParkBench x={3.5} z={-(D * 0.5)} ry={Math.PI / 2} />
-        <ParkBench x={W - 3.5} z={-(D * 0.5)} ry={-Math.PI / 2} />
-        <ParkBench x={W/2} z={-(D - 3.5)} ry={Math.PI} />
-        <ParkBench x={W/2} z={-3.5} ry={0} />
-
-        {/* Trees */}
-        {trees.map((t, i) => (
-          <ParkTree key={i} x={t.x} z={-t.z} scale={t.scale} />
+        {/* ── Perimeter trees ─────────────────────────────────────────────── */}
+        {treePositions.map((t, i) => (
+          <Tree key={i} x={t.x} z={-t.z} s={t.s} />
         ))}
+
+        {/* ── Benches (4 total) ────────────────────────────────────────────── */}
+        <Bench x={3.5}     z={-(D * 0.48)} ry={Math.PI / 2} />
+        <Bench x={W - 3.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
+        <Bench x={W/2 - 4} z={-(D * 0.52)} />
+        <Bench x={W/2 + 4} z={-(D * 0.52)} ry={Math.PI} />
+
+        {/* ── Pergola / shade structure (center-low zone) ──────────────────── */}
+        <Pergola x={W / 2} z={-(D * 0.35)} />
+
+        {/* ── Play equipment (upper zone on rubber mat) ────────────────────── */}
+        <PlayStructure x={W/2 - 5.0} z={-(D * 0.77)} />
+        <SwingSet      x={W/2 + 5.5} z={-(D * 0.77)} ry={Math.PI / 2} />
+        <SeeSaw        x={W/2 - 1.0} z={-(D * 0.68)} />
+
+        {/* ── Sandbox (lower-mid zone, centered) ──────────────────────────── */}
+        <Sandbox x={W / 2} z={-(D * 0.285)} />
+
       </group>
     </group>
   );
