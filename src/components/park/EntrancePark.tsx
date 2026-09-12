@@ -20,7 +20,6 @@ const D = 37.65;
 // ── Refined Color Palette — Professional Residential Park ─────────────────────
 const C_GRASS        = '#4f7a38';   // natural turf green
 const C_GRASS_DARK   = '#3d6028';   // slightly deeper (used for shrubs)
-const C_LAWN_LIGHT   = '#62924a';   // lighter turf for center lawn zone
 const C_PATH         = '#c4c4b8';   // warm concrete grey
 const C_RUBBER       = '#b55625';   // terracotta orange — professional, not cartoon
 const C_SAND         = '#c8a458';   // natural sandy beige
@@ -66,7 +65,6 @@ const MAT_LAMP     = new THREE.MeshStandardMaterial({ color: C_LAMP_POST,    rou
 const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,    roughness: 0.7  });
 const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,         roughness: 0.8  });
 const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,   roughness: 0.92 });
-const MAT_LAWN_LT  = new THREE.MeshStandardMaterial({ color: C_LAWN_LIGHT,   roughness: 0.92 });
 const MAT_FLOWER   = new THREE.MeshStandardMaterial({ color: C_FLOWER,       roughness: 0.88 });
 const MAT_WALL     = new THREE.MeshStandardMaterial({ color: C_WALL,         roughness: 0.95 });
 const MAT_WALL_CAP = new THREE.MeshStandardMaterial({ color: C_WALL_CAP,     roughness: 0.9  });
@@ -117,17 +115,20 @@ const GEO_SB_EDGE    = new THREE.BoxGeometry(5.0, 0.3, 0.25);
 const GEO_SB_EDGE_S  = new THREE.BoxGeometry(0.25, 0.3, 5.0);
 
 // Compound Wall & Gate
-const WALL_THICK     = 0.3;
-const WALL_HEIGHT    = 0.8;
+const WALL_THICK     = 0.4;
+const WALL_HEIGHT    = 1.1;
 const GEO_WALL_LONG  = new THREE.BoxGeometry(W, WALL_HEIGHT, WALL_THICK);
 const GEO_WALL_SHORT = new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, D);
-const GEO_WALL_CAP_L = new THREE.BoxGeometry(W + 0.06, 0.08, WALL_THICK + 0.06);
-const GEO_WALL_CAP_S = new THREE.BoxGeometry(WALL_THICK + 0.06, 0.08, D + 0.06);
+const GEO_WALL_CAP_L = new THREE.BoxGeometry(W + 0.08, 0.1, WALL_THICK + 0.08);
+const GEO_WALL_CAP_S = new THREE.BoxGeometry(WALL_THICK + 0.08, 0.1, D + 0.08);
 
-const GEO_GATE_PILLAR    = new THREE.BoxGeometry(0.6, 1.4, 0.6);
-const GEO_GATE_PILLAR_C  = new THREE.BoxGeometry(0.7, 0.12, 0.7);
-const GEO_GATE_BAR_V     = new THREE.BoxGeometry(0.03, 1.1, 0.03);
-const GEO_GATE_BAR_H     = new THREE.BoxGeometry(2.4, 0.05, 0.04);
+const GEO_GATE_PILLAR    = new THREE.BoxGeometry(0.7, 1.6, 0.7);
+const GEO_GATE_PILLAR_C  = new THREE.BoxGeometry(0.8, 0.15, 0.8);
+const GEO_GATE_BAR_V     = new THREE.BoxGeometry(0.04, 1.2, 0.04);
+const GEO_GATE_BAR_H     = new THREE.BoxGeometry(2.4, 0.06, 0.05);
+
+const GEO_HEDGE_LONG = new THREE.BoxGeometry(W, 0.4, 0.4);
+const GEO_HEDGE_SHORT = new THREE.BoxGeometry(0.4, 0.4, D);
 
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -258,64 +259,77 @@ function Sandbox({ x, z }: { x: number; z: number }) {
 /** Complete Compound Wall around the park boundary */
 function CompoundWall() {
   const y = WALL_HEIGHT / 2;
-  const cy = WALL_HEIGHT + 0.04;
+  const cy = WALL_HEIGHT + 0.05;
+  const hy = 0.2; // Hedge height/2
   
-  // The gate is centered on the front edge (Z=0). Gap width is 3.0m.
+  // The gate is on the left bottom (front edge Z=0, center X=4.5). Gap width is 3.0m.
+  const gateX = 4.5;
   const gapW = 3.0;
-  const leftW = (W - gapW) / 2;
+  const leftW = gateX - (gapW / 2);
+  const rightW = W - gateX - (gapW / 2);
 
   // Front wall left of gate
   const fwL_geom = new THREE.BoxGeometry(leftW, WALL_HEIGHT, WALL_THICK);
-  const fwL_cap = new THREE.BoxGeometry(leftW + 0.06, 0.08, WALL_THICK + 0.06);
+  const fwL_cap = new THREE.BoxGeometry(leftW + 0.08, 0.1, WALL_THICK + 0.08);
   // Front wall right of gate
-  const fwR_geom = new THREE.BoxGeometry(leftW, WALL_HEIGHT, WALL_THICK);
-  const fwR_cap = new THREE.BoxGeometry(leftW + 0.06, 0.08, WALL_THICK + 0.06);
+  const fwR_geom = new THREE.BoxGeometry(rightW, WALL_HEIGHT, WALL_THICK);
+  const fwR_cap = new THREE.BoxGeometry(rightW + 0.08, 0.1, WALL_THICK + 0.08);
 
   return (
     <group>
-      {/* Back Wall */}
+      {/* Back Wall & Hedges */}
       <mesh position={[W/2, y, -D]} geometry={GEO_WALL_LONG} material={MAT_WALL} />
       <mesh position={[W/2, cy, -D]} geometry={GEO_WALL_CAP_L} material={MAT_WALL_CAP} />
+      <mesh position={[W/2, hy, -D + 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
+      <mesh position={[W/2, hy, -D - 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
       
-      {/* Left Wall */}
+      {/* Left Wall & Hedges */}
       <mesh position={[0, y, -D/2]} geometry={GEO_WALL_SHORT} material={MAT_WALL} />
       <mesh position={[0, cy, -D/2]} geometry={GEO_WALL_CAP_S} material={MAT_WALL_CAP} />
+      <mesh position={[0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
+      <mesh position={[-0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
 
-      {/* Right Wall */}
+      {/* Right Wall & Hedges */}
       <mesh position={[W, y, -D/2]} geometry={GEO_WALL_SHORT} material={MAT_WALL} />
       <mesh position={[W, cy, -D/2]} geometry={GEO_WALL_CAP_S} material={MAT_WALL_CAP} />
+      <mesh position={[W - 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
+      <mesh position={[W + 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
 
-      {/* Front Wall (with 3.0m gap for entrance gate at W/2) */}
+      {/* Front Wall (with gate gap) */}
       <mesh position={[leftW/2, y, 0]} geometry={fwL_geom} material={MAT_WALL} />
       <mesh position={[leftW/2, cy, 0]} geometry={fwL_cap} material={MAT_WALL_CAP} />
+      <mesh position={[leftW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(leftW, 0.4, 0.4)} material={MAT_SHRUB} />
+      <mesh position={[leftW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(leftW, 0.4, 0.4)} material={MAT_SHRUB} />
 
-      <mesh position={[W - leftW/2, y, 0]} geometry={fwR_geom} material={MAT_WALL} />
-      <mesh position={[W - leftW/2, cy, 0]} geometry={fwR_cap} material={MAT_WALL_CAP} />
+      <mesh position={[gateX + gapW/2 + rightW/2, y, 0]} geometry={fwR_geom} material={MAT_WALL} />
+      <mesh position={[gateX + gapW/2 + rightW/2, cy, 0]} geometry={fwR_cap} material={MAT_WALL_CAP} />
+      <mesh position={[gateX + gapW/2 + rightW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(rightW, 0.4, 0.4)} material={MAT_SHRUB} />
+      <mesh position={[gateX + gapW/2 + rightW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(rightW, 0.4, 0.4)} material={MAT_SHRUB} />
     </group>
   );
 }
 
 /** Dedicated pedestrian entrance gate */
 function EntranceGate() {
-  const py = 1.4 / 2;
-  const cy = 1.4 + 0.06;
+  const py = 1.6 / 2;
+  const cy = 1.6 + 0.07;
   return (
-    <group position={[W/2, 0, 0]}>
+    <group position={[4.5, 0, 0]}>
       {/* Left Pillar */}
       <mesh position={[-1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
       <mesh position={[-1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
-      <LampPost x={-2.3} z={0} py={1.46} />
+      <LampPost x={-1.5} z={0} py={1.67} />
       
       {/* Right Pillar */}
       <mesh position={[1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
       <mesh position={[1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
-      <LampPost x={0.7} z={0} py={1.46} />
+      <LampPost x={1.5} z={0} py={1.67} />
 
       {/* Metal Gate (centered between pillars) */}
-      <mesh position={[0, 0.4, 0]} geometry={GEO_GATE_BAR_H} material={MAT_METAL} />
-      <mesh position={[0, 1.1, 0]} geometry={GEO_GATE_BAR_H} material={MAT_METAL} />
+      <mesh position={[0, 0.5, 0]} geometry={GEO_GATE_BAR_H} material={MAT_METAL} />
+      <mesh position={[0, 1.2, 0]} geometry={GEO_GATE_BAR_H} material={MAT_METAL} />
       {[-1.1, -0.85, -0.6, -0.35, -0.1, 0.15, 0.4, 0.65, 0.9, 1.15].map((ox, i) => (
-        <mesh key={i} position={[ox - 0.025, 0.75, 0]} geometry={GEO_GATE_BAR_V} material={MAT_METAL} />
+        <mesh key={i} position={[ox - 0.025, 0.85, 0]} geometry={GEO_GATE_BAR_V} material={MAT_METAL} />
       ))}
     </group>
   );
@@ -337,62 +351,26 @@ export default function EntrancePark() {
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Perimeter path ring (1.2m wide, inset by 0.5m for planting buffer)
-    const pathRing = new THREE.Shape();
-    pathRing.moveTo(1.0, 1.0); pathRing.lineTo(W-1.0, 1.0);
-    pathRing.lineTo(W-1.0, D-1.0); pathRing.lineTo(1.0, D-1.0); pathRing.lineTo(1.0, 1.0);
-    const pathHole = new THREE.Path();
-    pathHole.moveTo(2.2, 2.2); pathHole.lineTo(W-2.2, 2.2);
-    pathHole.lineTo(W-2.2, D-2.2); pathHole.lineTo(2.2, D-2.2); pathHole.lineTo(2.2, 2.2);
-    pathRing.holes.push(pathHole);
+    // 2. Short paved entry path from the gate
+    const entryPath = new THREE.Shape();
+    entryPath.moveTo(3.0, 0); entryPath.lineTo(6.0, 0);
+    entryPath.lineTo(6.0, 2.5); entryPath.lineTo(3.0, 2.5); entryPath.lineTo(3.0, 0);
 
-    // 3. Central pathway network
-    const network = new THREE.Shape();
-    // Spine (Y: 0 to D-2.2) connects directly to the gate at Y=0
-    network.moveTo(W/2-1.2, 0); network.lineTo(W/2+1.2, 0);
-    network.lineTo(W/2+1.2, D-2.2); network.lineTo(W/2-1.2, D-2.2); network.lineTo(W/2-1.2, 0);
-    
-    // Cross path to pergola (Y = D*0.35)
-    const cross1 = new THREE.Shape();
-    cross1.moveTo(2.2, D*0.35 - 1.2); cross1.lineTo(W-2.2, D*0.35 - 1.2);
-    cross1.lineTo(W-2.2, D*0.35 + 1.2); cross1.lineTo(2.2, D*0.35 + 1.2); cross1.lineTo(2.2, D*0.35 - 1.2);
-
-    // Cross path to playground (Y = D*0.77)
-    const cross2 = new THREE.Shape();
-    cross2.moveTo(2.2, D*0.77 - 1.0); cross2.lineTo(W-2.2, D*0.77 - 1.0);
-    cross2.lineTo(W-2.2, D*0.77 + 1.0); cross2.lineTo(2.2, D*0.77 + 1.0); cross2.lineTo(2.2, D*0.77 - 1.0);
-
-    // 4. Rubber play surface (upper zone)
+    // 3. Rubber play surface (upper zone)
     const rubber = new THREE.Shape();
     rubber.moveTo(3.5, D*0.57); rubber.lineTo(W-3.5, D*0.57);
     rubber.lineTo(W-3.5, D-3.2); rubber.lineTo(3.5, D-3.2); rubber.lineTo(3.5, D*0.57);
 
-    // 5. Sandbox fill
+    // 4. Sandbox fill
     const sand = new THREE.Shape();
     sand.moveTo(W/2-2.2, D*0.20); sand.lineTo(W/2+2.2, D*0.20);
     sand.lineTo(W/2+2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20);
 
-    // 6. Center lawn (lighter green mid zone — around pergola)
-    const centerLawn = new THREE.Shape();
-    centerLawn.moveTo(2.5, D*0.30); centerLawn.lineTo(W-2.5, D*0.30);
-    centerLawn.lineTo(W-2.5, D*0.54); centerLawn.lineTo(2.5, D*0.54);
-    centerLawn.lineTo(2.5, D*0.30);
-    // Punch out sandbox area
-    const sbHole = new THREE.Path();
-    sbHole.moveTo(W/2-2.2, D*0.20); sbHole.lineTo(W/2+2.2, D*0.20);
-    sbHole.lineTo(W/2+2.2, D*0.20+4.4); sbHole.lineTo(W/2-2.2, D*0.20+4.4);
-    sbHole.lineTo(W/2-2.2, D*0.20);
-    centerLawn.holes.push(sbHole);
-
     return {
       grass:      ext(grass,      0.10, true),
-      path:       ext(pathRing,   0.14, false),
-      spine:      ext(network,    0.14, false),
-      cross1:     ext(cross1,     0.14, false),
-      cross2:     ext(cross2,     0.14, false),
+      entryPath:  ext(entryPath,  0.14, false),
       rubber:     ext(rubber,     0.16, false),
       sand:       ext(sand,       0.18, false),
-      centerLawn: ext(centerLawn, 0.13, false),
     };
   }, []);
 
@@ -416,11 +394,7 @@ export default function EntrancePark() {
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
       <mesh geometry={groundGeoms.grass}      material={MAT_GRASS}   receiveShadow />
-      <mesh geometry={groundGeoms.centerLawn} material={MAT_LAWN_LT} receiveShadow />
-      <mesh geometry={groundGeoms.path}       material={MAT_PATH}    receiveShadow />
-      <mesh geometry={groundGeoms.spine}      material={MAT_PATH}    receiveShadow />
-      <mesh geometry={groundGeoms.cross1}     material={MAT_PATH}    receiveShadow />
-      <mesh geometry={groundGeoms.cross2}     material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.entryPath}  material={MAT_PATH}    receiveShadow />
       <mesh geometry={groundGeoms.rubber}     material={MAT_RUBBER}  receiveShadow />
       <mesh geometry={groundGeoms.sand}       material={MAT_SAND}    receiveShadow />
 
