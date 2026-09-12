@@ -78,7 +78,7 @@ const InteractivePlotComponent = ({
   onClick: (id: number, worldPos: [number, number, number]) => void;
   status?: PlotStatus;
 }) => {
-  const { geom, metrics, worldPos, innerLine, boundaryLine, dimAnchors } =
+  const { geom, metrics, worldPos, innerLine, boundaryGeom, crosshairGeom, dimAnchors } =
     useMemo(() => {
       const g = getPlotGeom(plot);
 
@@ -107,9 +107,11 @@ const InteractivePlotComponent = ({
       const inner = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, 0.15));
       inner.push(inner[0].clone()); // close
 
-      // ── White selection outline (exact plot boundary, no outward offset) ──
+      // ── Native White Selection Boundary (Sharp dashed line) ────────────────
       const boundary = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, WHITE_OUTLINE_Z));
       boundary.push(boundary[0].clone()); // close
+
+      const boundaryGeom = new THREE.BufferGeometry().setFromPoints(boundary);
 
       // ── Dimension label anchors along exact edge midpoints ───────────────
       function getEdgeAnchor(ax: number, ay: number, bx: number, by: number) {
@@ -141,12 +143,24 @@ const InteractivePlotComponent = ({
       const centerX = -(plot.depthB + plot.depthT) / 4;
       const centerY = plot.frontage / 2;
 
+      // ── Corner Crosshairs (tiny + markers) ─────────────────────────────────
+      const crosshairPoints: THREE.Vector3[] = [];
+      const s = 0.4; // crosshair half-size
+      corners.forEach(([cx, cy]) => {
+        crosshairPoints.push(new THREE.Vector3(cx - s, cy, WHITE_OUTLINE_Z));
+        crosshairPoints.push(new THREE.Vector3(cx + s, cy, WHITE_OUTLINE_Z));
+        crosshairPoints.push(new THREE.Vector3(cx, cy - s, WHITE_OUTLINE_Z));
+        crosshairPoints.push(new THREE.Vector3(cx, cy + s, WHITE_OUTLINE_Z));
+      });
+      const crosshairGeom = new THREE.BufferGeometry().setFromPoints(crosshairPoints);
+
       return {
         geom: g,
         metrics: { fmtM2, fmtFt2, centerX, centerY },
         worldPos: [x + centerX, 0.5, -(y + centerY)] as [number, number, number],
         innerLine: inner,
-        boundaryLine: boundary,
+        boundaryGeom,
+        crosshairGeom,
         dimAnchors: {
           right: rightAnchor,
           top:   topAnchor,
@@ -174,7 +188,7 @@ const InteractivePlotComponent = ({
   // ── Colors ───────────────────────────────────────────────────────────────
   const defaultBgColor  = isSold ? '#8c3a3a' : '#b89b6b'; // Even darker, richer tan
   const hoverBgColor    = isSold ? '#a04848' : '#9e8254';
-  const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep rich blue (#1565C0)
+  const selectedBgColor = isSold ? '#6b2828' : '#1a66cc'; // Matching exact rich deep sky blue from reference
   const currentColor    = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
   // ── Plot number string ────────────────────────────────────────────────────
@@ -250,18 +264,29 @@ const InteractivePlotComponent = ({
         />
       </mesh>
 
-      {/* ── White selection boundary line (exact plot perimeter) ── */}
+      {/* ── Native WebGL Sharp White Dashed Line & Crosshairs ── */}
       {isSelected && (
-        <Line
-          raycast={() => null}
-          points={boundaryLine}
-          color="#ffffff"
-          lineWidth={1.6}
-          dashed={true}
-          dashSize={0.25}
-          gapSize={0.15}
-          renderOrder={105}
-        />
+        <group renderOrder={105}>
+          {/* Main dashed border */}
+          <primitive 
+            object={(() => {
+              const line = new THREE.Line(
+                boundaryGeom, 
+                new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.5, gapSize: 0.3 })
+              );
+              line.computeLineDistances();
+              return line;
+            })()} 
+          />
+          
+          {/* Corner crosshair markers (+) */}
+          <primitive 
+            object={new THREE.LineSegments(
+              crosshairGeom,
+              new THREE.LineBasicMaterial({ color: 0xffffff })
+            )} 
+          />
+        </group>
       )}
 
       {/* ── Plot number ── */}
@@ -344,12 +369,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.right.x, dimAnchors.right.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.right.angle]}
             fontSize={dimFontSize}
-            color="#000000"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.15}
+            outlineColor="#000000"
             renderOrder={120}
           >
             {formatDimension(dimAnchors.right.dim)}
@@ -361,12 +386,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.top.x, dimAnchors.top.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.top.angle]}
             fontSize={dimFontSize}
-            color="#000000"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.15}
+            outlineColor="#000000"
             renderOrder={120}
           >
             {formatDimension(dimAnchors.top.dim)}
@@ -378,12 +403,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.left.x, dimAnchors.left.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.left.angle]}
             fontSize={dimFontSize}
-            color="#000000"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.15}
+            outlineColor="#000000"
             renderOrder={120}
           >
             {formatDimension(dimAnchors.left.dim)}
@@ -395,12 +420,12 @@ const InteractivePlotComponent = ({
             position={[dimAnchors.bot.x, dimAnchors.bot.y, LABEL_Z]}
             rotation={[0, 0, dimAnchors.bot.angle]}
             fontSize={dimFontSize}
-            color="#000000"
+            color="#ffffff"
             anchorX="center"
             anchorY="middle"
             fontWeight="bold"
-            outlineWidth={dimFontSize * 0.25}
-            outlineColor="#ffffff"
+            outlineWidth={dimFontSize * 0.15}
+            outlineColor="#000000"
             renderOrder={120}
           >
             {formatDimension(dimAnchors.bot.dim)}
