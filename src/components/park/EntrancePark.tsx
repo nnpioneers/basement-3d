@@ -39,7 +39,6 @@ const C_METAL        = '#3a3a3a';   // dark steel (chains, ladder, gate)
 const C_LAMP_POST    = '#2a2a2a';   // matte dark iron
 const C_LAMP_GLOW    = '#f5e8c0';   // warm cream lantern cap
 const C_SLAB         = '#8a9090';   // cool grey for fulcrum/supports
-const C_FLOWER       = '#d4784a';   // warm terracotta flower bed color
 const C_WALL         = '#d0d0cc';   // light concrete/stone for compound wall
 const C_WALL_CAP     = '#a0a09c';   // slightly darker cap for the wall
 
@@ -65,7 +64,6 @@ const MAT_LAMP     = new THREE.MeshStandardMaterial({ color: C_LAMP_POST,    rou
 const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,    roughness: 0.7  });
 const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,         roughness: 0.8  });
 const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,   roughness: 0.92 });
-const MAT_FLOWER   = new THREE.MeshStandardMaterial({ color: C_FLOWER,       roughness: 0.88 });
 const MAT_WALL     = new THREE.MeshStandardMaterial({ color: C_WALL,         roughness: 0.95 });
 const MAT_WALL_CAP = new THREE.MeshStandardMaterial({ color: C_WALL_CAP,     roughness: 0.9  });
 
@@ -86,8 +84,6 @@ const GEO_LAMP_POST  = new THREE.CylinderGeometry(0.055, 0.07, 3.2, 5, 1);
 const GEO_LAMP_ARM   = new THREE.BoxGeometry(0.8, 0.07, 0.07);
 const GEO_LAMP_HEAD  = new THREE.BoxGeometry(0.32, 0.18, 0.32);
 const GEO_LAMP_DOME  = new THREE.SphereGeometry(0.18, 5, 4);
-// Flower bed
-const GEO_FLOWER_BED = new THREE.CircleGeometry(1.1, 7);
 // Pergola
 const GEO_PERG_POST  = new THREE.CylinderGeometry(0.14, 0.14, 2.8, 5, 1);
 const GEO_PERG_BEAM  = new THREE.BoxGeometry(7.2, 0.16, 0.22);
@@ -113,8 +109,16 @@ const GEO_SS_BASE    = new THREE.CylinderGeometry(0.13, 0.18, 0.75, 5, 1);
 const GEO_SS_PLANK   = new THREE.BoxGeometry(3.4, 0.1, 0.32);
 const GEO_SS_HANDLE  = new THREE.CylinderGeometry(0.045, 0.045, 0.35, 5, 1);
 // Sandbox border
-const GEO_SB_EDGE    = new THREE.BoxGeometry(5.0, 0.3, 0.25);
-const GEO_SB_EDGE_S  = new THREE.BoxGeometry(0.25, 0.3, 5.0);
+const GEO_SB_EDGE_W  = new THREE.BoxGeometry(7.0, 0.3, 0.25);
+const GEO_SB_EDGE_D  = new THREE.BoxGeometry(0.25, 0.3, 4.0);
+
+// Lawn Pads (Octagons)
+const GEO_PAD        = new THREE.CylinderGeometry(1.5, 1.5, 0.05, 8);
+
+// Tent / Merry-go-round structure
+const GEO_TENT_BASE  = new THREE.CylinderGeometry(4.0, 4.0, 0.2, 16);
+const GEO_TENT_CONE  = new THREE.ConeGeometry(4.0, 2.5, 12);
+const GEO_TENT_POLE  = new THREE.CylinderGeometry(0.06, 0.06, 2.2, 5, 1);
 
 // Compound Wall & Gate
 const WALL_THICK     = 0.4;
@@ -255,10 +259,28 @@ function SeeSaw({ x, z }: { x: number; z: number }) {
 function Sandbox({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0,    0.15,  2.35]} geometry={GEO_SB_EDGE}   material={MAT_WOOD} />
-      <mesh position={[0,    0.15, -2.35]} geometry={GEO_SB_EDGE}   material={MAT_WOOD} />
-      <mesh position={[-2.35,0.15,  0   ]} geometry={GEO_SB_EDGE_S} material={MAT_WOOD} />
-      <mesh position={[ 2.35,0.15,  0   ]} geometry={GEO_SB_EDGE_S} material={MAT_WOOD} />
+      <mesh position={[0,    0.15,  2.0 ]} geometry={GEO_SB_EDGE_W} material={MAT_WOOD} />
+      <mesh position={[0,    0.15, -2.0 ]} geometry={GEO_SB_EDGE_W} material={MAT_WOOD} />
+      <mesh position={[-3.5, 0.15,  0   ]} geometry={GEO_SB_EDGE_D} material={MAT_WOOD} />
+      <mesh position={[ 3.5, 0.15,  0   ]} geometry={GEO_SB_EDGE_D} material={MAT_WOOD} />
+    </group>
+  );
+}
+
+function Tent({ x, z }: { x: number; z: number }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.1, 0]} geometry={GEO_TENT_BASE} material={MAT_SLAB} />
+      <mesh position={[0, 3.45, 0]} castShadow geometry={GEO_TENT_CONE} material={MAT_RED} />
+      {/* Decorative white rim */}
+      <mesh position={[0, 2.2, 0]} geometry={GEO_TENT_CONE} material={MAT_LAMP_CAP} scale={[1.02, 0.05, 1.02]} />
+      {/* 8 Poles */}
+      {[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+        const a = (i / 8) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a)*3.7, 1.1, Math.sin(a)*3.7]} geometry={GEO_TENT_POLE} material={MAT_METAL} />
+        );
+      })}
     </group>
   );
 }
@@ -362,28 +384,33 @@ export default function EntrancePark() {
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Pathway Network (Entry, left loop, right connection)
+    // 2. Pathway Network (Perimeter + Central Cross)
     const paths: THREE.Shape[] = [];
-    addRect(paths, 12.5, 23.0, 14.5, D);        // Main entry path from gate
-    addRect(paths, 5.0, 21.0, 20.0, 23.0);      // Horizontal crossbar
     
-    // Left loop (Around Pergola)
-    addRect(paths, 3.0, 9.0, 5.0, 23.0);        // Left vertical
-    addRect(paths, 10.0, 9.0, 12.0, 23.0);      // Right vertical
-    addRect(paths, 3.0, 9.0, 12.0, 11.0);       // Bottom horizontal
+    // Perimeter loop (1.5m offset from wall, 2m wide path)
+    addRect(paths, 1.5, 1.5, 3.5, 36.0);    // Left
+    addRect(paths, 23.5, 1.5, 25.5, 36.0);  // Right
+    addRect(paths, 3.5, 1.5, 23.5, 3.5);    // Top
+    addRect(paths, 3.5, 34.0, 23.5, 36.0);  // Bottom
 
-    // Right connection to playground
-    addRect(paths, 18.0, 13.0, 20.0, 21.0);     // Right vertical side path
+    // Central Cross
+    addRect(paths, 12.5, 3.5, 14.5, D);     // Vertical (Connects to Gate at D=37.65)
+    addRect(paths, 3.5, 17.5, 12.5, 19.5);  // Horizontal Left
+    addRect(paths, 14.5, 17.5, 23.5, 19.5); // Horizontal Right
 
-    // 3. Circular Play Area (Rubber)
+    // 3. Play Areas & Pads (Rubber)
     const rubberShapes: THREE.Shape[] = [];
-    const playArea = new THREE.Shape();
-    playArea.absarc(20.0, 16.0, 6.0, 0, Math.PI * 2, false);
-    rubberShapes.push(playArea);
+    // Q1: Top-Left Playground Rectangle
+    addRect(rubberShapes, 4.5, 4.5, 11.5, 16.5);
+    // Q2: Top-Right Circular Plaza
+    const plaza = new THREE.Shape();
+    plaza.absarc(19.0, 10.5, 4.5, 0, Math.PI * 2, false);
+    rubberShapes.push(plaza);
 
     // 4. Sandbox (Sand)
     const sandShapes: THREE.Shape[] = [];
-    addRect(sandShapes, 6.0, 24.5, 9.0, 27.5);
+    // Q4: Bottom-Right Sandbox
+    addRect(sandShapes, 15.5, 29.0, 22.5, 33.0);
 
     return {
       grass:      ext(grass,        0.10, true),
@@ -397,14 +424,17 @@ export default function EntrancePark() {
     const out: Array<{ x: number; z: number; s: number; alt: boolean }> = [];
     const ss = [0.9, 1.0, 0.85, 1.05, 0.95, 0.9, 1.0, 0.85, 1.05, 0.9, 0.85, 1.0, 0.95, 0.88];
     let i = 0;
-    // Left and Right edges
+    // Trees placed strictly in the perimeter buffer (0.8m from wall)
     for (let z = 2.0; z < D - 2.0; z += 5.0) {
-      out.push({ x: 1.8, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
-      out.push({ x: W - 1.8, z, s: ss[i++ % ss.length], alt: i % 3 === 1 });
+      out.push({ x: 0.8, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
+      out.push({ x: W - 0.8, z, s: ss[i++ % ss.length], alt: i % 3 === 1 });
     }
-    // Top edge (Front of park, Z ~ 1.5)
-    for (let x = 6.0; x < W - 5.0; x += 5.5) {
-      out.push({ x, z: 1.8, s: ss[i++ % ss.length], alt: i % 3 === 2 });
+    for (let x = 4.0; x < W - 3.0; x += 5.5) {
+      out.push({ x, z: 0.8, s: ss[i++ % ss.length], alt: i % 3 === 2 }); // Top edge
+      // Bottom edge (near gate) - skip the center where the gate is
+      if (x < 11.0 || x > 16.0) {
+        out.push({ x, z: D - 0.8, s: ss[i++ % ss.length], alt: i % 3 === 0 });
+      }
     }
     return out;
   }, []);
@@ -439,33 +469,43 @@ export default function EntrancePark() {
         <Shrub x={W/2 - 4.5} z={-(D * 0.40)} />
         <Shrub x={W/2 + 4.5} z={-(D * 0.40)} />
 
-        {/* Flower beds */}
-        <mesh position={[5.0, 0.05, -24.5]}  rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
-        <mesh position={[10.0, 0.05, -24.5]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        {/* Q3 Bottom-Left: Lawn Pads */}
+        <mesh position={[6.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
+        <mesh position={[10.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
 
-        {/* Park lamp posts */}
-        <LampPost x={4.0} z={-9.0} />
-        <LampPost x={11.0} z={-9.0} />
-        <LampPost x={4.0} z={-23.0} />
-        <LampPost x={11.0} z={-23.0} />
-        <LampPost x={20.0} z={-22.0} />
-        <LampPost x={20.0} z={-10.0} />
-        <LampPost x={13.5} z={-28.0} />
+        {/* Shrubs along the central path */}
+        <Shrub x={11.5} z={-25.0} />
+        <Shrub x={15.5} z={-25.0} />
+        <Shrub x={11.5} z={-12.0} />
+        <Shrub x={15.5} z={-12.0} />
+
+        {/* Park lamp posts at intersections */}
+        <LampPost x={4.0} z={-17.0} />
+        <LampPost x={12.0} z={-17.0} />
+        <LampPost x={15.0} z={-17.0} />
+        <LampPost x={23.0} z={-17.0} />
+        <LampPost x={12.0} z={-4.0} />
+        <LampPost x={15.0} z={-4.0} />
+        <LampPost x={12.0} z={-33.0} />
+        <LampPost x={15.0} z={-33.0} />
 
         {/* Benches */}
-        <Bench x={4.0}  z={-16.0} ry={Math.PI / 2} />
-        <Bench x={11.0} z={-16.0} ry={-Math.PI / 2} />
-        <Bench x={7.5}  z={-10.0} ry={0} />
-        <Bench x={13.5} z={-25.0} ry={Math.PI} />
+        <Bench x={8.0}  z={-3.0} ry={0} />
+        <Bench x={19.0} z={-3.0} ry={0} />
+        <Bench x={12.0} z={-27.0} ry={Math.PI / 2} />
+        <Bench x={15.0} z={-27.0} ry={-Math.PI / 2} />
 
-        {/* Left Zone: Pergola & Sandbox */}
-        <Pergola x={7.5} z={-16.0} />
-        <Sandbox x={7.5} z={-26.0} />
+        {/* Q1 Top-Left: Playground */}
+        <PlayStructure x={8.0} z={-8.0} />
+        <SwingSet      x={8.0} z={-13.5} ry={Math.PI / 2} />
+        <SeeSaw        x={6.0} z={-10.5} />
 
-        {/* Right Zone: Circular Play Equipment */}
-        <PlayStructure x={18.0} z={-16.0} />
-        <SwingSet      x={22.0} z={-15.0} ry={Math.PI / 2} />
-        <SeeSaw        x={20.0} z={-19.0} />
+        {/* Q2 Top-Right: Circular Tent Area */}
+        <Tent x={19.0} z={-10.5} />
+
+        {/* Q4 Bottom-Right: Pergola & Sandbox */}
+        <Pergola x={19.0} z={-24.5} />
+        <Sandbox x={19.0} z={-31.0} />
 
       </group>
     </group>
