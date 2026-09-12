@@ -22,7 +22,7 @@ const C_GRASS        = '#4f7a38';   // natural turf green
 const C_GRASS_DARK   = '#3d6028';   // slightly deeper (used for shrubs)
 const C_PATH         = '#c4c4b8';   // warm concrete grey
 const C_RUBBER       = '#b55625';   // terracotta orange — professional, not cartoon
-const C_SAND         = '#c8a458';   // natural sandy beige
+const C_SOIL         = '#6b4b3a';   // natural dark brown earth/soil tone
 const C_EQUIP_BLUE   = '#2b5f8e';   // steel blue — modern play equipment
 const C_EQUIP_RED    = '#9e3020';   // brick red — restrained, professional
 const C_EQUIP_YELLOW = '#c88c18';   // warm amber — not neon
@@ -39,7 +39,6 @@ const C_METAL        = '#3a3a3a';   // dark steel (chains, ladder, gate)
 const C_LAMP_POST    = '#2a2a2a';   // matte dark iron
 const C_LAMP_GLOW    = '#f5e8c0';   // warm cream lantern cap
 const C_SLAB         = '#8a9090';   // cool grey for fulcrum/supports
-const C_FLOWER       = '#d4784a';   // warm terracotta flower bed color
 const C_WALL         = '#d0d0cc';   // light concrete/stone for compound wall
 const C_WALL_CAP     = '#a0a09c';   // slightly darker cap for the wall
 
@@ -47,7 +46,7 @@ const C_WALL_CAP     = '#a0a09c';   // slightly darker cap for the wall
 const MAT_GRASS    = new THREE.MeshStandardMaterial({ color: C_GRASS,        roughness: 0.92, metalness: 0 });
 const MAT_PATH     = new THREE.MeshStandardMaterial({ color: C_PATH,         roughness: 0.88 });
 const MAT_RUBBER   = new THREE.MeshStandardMaterial({ color: C_RUBBER,       roughness: 0.9  });
-const MAT_SAND     = new THREE.MeshStandardMaterial({ color: C_SAND,         roughness: 0.96 });
+const MAT_SOIL     = new THREE.MeshStandardMaterial({ color: C_SOIL,         roughness: 0.96 });
 const MAT_BLUE     = new THREE.MeshStandardMaterial({ color: C_EQUIP_BLUE,   roughness: 0.6, metalness: 0.15 });
 const MAT_RED      = new THREE.MeshStandardMaterial({ color: C_EQUIP_RED,    roughness: 0.62 });
 const MAT_YELLOW   = new THREE.MeshStandardMaterial({ color: C_EQUIP_YELLOW, roughness: 0.6  });
@@ -65,7 +64,6 @@ const MAT_LAMP     = new THREE.MeshStandardMaterial({ color: C_LAMP_POST,    rou
 const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,    roughness: 0.7  });
 const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,         roughness: 0.8  });
 const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,   roughness: 0.92 });
-const MAT_FLOWER   = new THREE.MeshStandardMaterial({ color: C_FLOWER,       roughness: 0.88 });
 const MAT_WALL     = new THREE.MeshStandardMaterial({ color: C_WALL,         roughness: 0.95 });
 const MAT_WALL_CAP = new THREE.MeshStandardMaterial({ color: C_WALL_CAP,     roughness: 0.9  });
 
@@ -76,9 +74,8 @@ const GEO_BRANCH     = new THREE.CylinderGeometry(0.04, 0.08, 0.8, 4, 1);
 const GEO_LEAF_1     = new THREE.IcosahedronGeometry(1.2, 1);
 const GEO_LEAF_2     = new THREE.IcosahedronGeometry(1.0, 1);
 const GEO_LEAF_3     = new THREE.IcosahedronGeometry(1.1, 1);
-// Shrub & Flower
+// Shrub
 const GEO_SHRUB      = new THREE.SphereGeometry(0.65, 5, 4);
-const GEO_FLOWER     = new THREE.IcosahedronGeometry(0.2, 0);
 // Bench
 const GEO_BENCH_SEAT = new THREE.BoxGeometry(1.6, 0.1, 0.45);
 const GEO_BENCH_BACK = new THREE.BoxGeometry(1.6, 0.45, 0.09);
@@ -158,16 +155,6 @@ function Tree({ x, z, s = 1.0, alt = false }: { x: number; z: number; s?: number
         <mesh position={[0.6, -0.2, 0.4]}  castShadow geometry={GEO_LEAF_3} material={mat} />
         <mesh position={[-0.1, -0.4, 0.5]} castShadow geometry={GEO_LEAF_2} material={mat} scale={0.7} />
       </group>
-    </group>
-  );
-}
-
-function FlowerCluster({ x, z }: { x: number; z: number }) {
-  return (
-    <group position={[x, 0.1, z]}>
-      <mesh position={[0, 0, 0]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
-      <mesh position={[0.3, 0, 0.2]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
-      <mesh position={[-0.2, 0, 0.3]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
     </group>
   );
 }
@@ -469,7 +456,7 @@ export default function EntrancePark() {
       <mesh geometry={groundGeoms.grass}       material={MAT_GRASS}   receiveShadow />
       <mesh geometry={groundGeoms.entryPath}   material={MAT_PATH}    receiveShadow />
       <mesh geometry={groundGeoms.rubber}      material={MAT_RUBBER}  receiveShadow />
-      <mesh geometry={groundGeoms.sand}        material={MAT_SAND}    receiveShadow />
+      <mesh geometry={groundGeoms.sand}        material={MAT_SOIL}    receiveShadow />
       <mesh geometry={groundGeoms.pergolaBase} material={MAT_PATH}    receiveShadow />
 
       {/* ── 3D equipment group (rotation restores Y-up orientation) ────── */}
@@ -484,34 +471,16 @@ export default function EntrancePark() {
           <Tree key={i} x={t.x} z={-t.z} s={t.s} alt={t.alt} />
         ))}
 
-        {/* Shrubs — placed inside the wall perimeter as landscape buffer */}
+        {/* Shrubs — Only intentional boundary/perimeter landscaping */}
         <Shrub x={1.5} z={-1.5} />
         <Shrub x={W-1.5} z={-1.5} />
         <Shrub x={1.5} z={-(D-1.5)} />
         <Shrub x={W-1.5} z={-(D-1.5)} />
-        <Shrub x={W/2 - 4.5} z={-(D * 0.33)} />
-        <Shrub x={W/2 + 4.5} z={-(D * 0.33)} />
-        <Shrub x={W/2 - 4.5} z={-(D * 0.40)} />
-        <Shrub x={W/2 + 4.5} z={-(D * 0.40)} />
 
-        {/* Q3 Bottom-Left: Lawn Pads */}
-        <mesh position={[6.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
-        <mesh position={[10.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
+        {/* Q3 Bottom-Left: Lawn Pads (Soil color) */}
+        <mesh position={[6.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SOIL} />
+        <mesh position={[10.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SOIL} />
 
-        {/* Shrubs along the central paths and corners */}
-        <Shrub x={11.5} z={-25.0} />
-        <Shrub x={15.5} z={-25.0} />
-        <Shrub x={11.5} z={-12.0} />
-        <Shrub x={15.5} z={-12.0} />
-        <Shrub x={4.5}  z={-4.5} />
-        <Shrub x={22.5} z={-4.5} />
-
-        {/* Flower clusters adding color accents */}
-        <FlowerCluster x={7.0} z={-25.5} />
-        <FlowerCluster x={10.0} z={-25.5} />
-        <FlowerCluster x={13.5} z={-21.0} />
-        <FlowerCluster x={13.5} z={-16.0} />
-        <FlowerCluster x={20.0} z={-15.5} />
 
         {/* Park lamp posts at intersections */}
         <LampPost x={4.0} z={-17.0} />
