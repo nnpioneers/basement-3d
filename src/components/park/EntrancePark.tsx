@@ -72,7 +72,9 @@ const MAT_WALL_CAP = new THREE.MeshStandardMaterial({ color: C_WALL_CAP,     rou
 // ── Module-level Geometries (allocated ONCE) ──────────────────────────────────
 // Tree
 const GEO_TRUNK      = new THREE.CylinderGeometry(0.14, 0.22, 1.4, 5, 1);
-const GEO_LEAVES_LG  = new THREE.SphereGeometry(1.35, 6, 5);
+const GEO_LEAF_1     = new THREE.IcosahedronGeometry(1.2, 1);
+const GEO_LEAF_2     = new THREE.IcosahedronGeometry(1.0, 1);
+const GEO_LEAF_3     = new THREE.IcosahedronGeometry(1.1, 1);
 // Shrub
 const GEO_SHRUB      = new THREE.SphereGeometry(0.65, 5, 4);
 // Bench
@@ -134,10 +136,15 @@ const GEO_HEDGE_SHORT = new THREE.BoxGeometry(0.4, 0.4, D);
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Tree({ x, z, s = 1.0, alt = false }: { x: number; z: number; s?: number; alt?: boolean }) {
+  const mat = alt ? MAT_FOLIAGE2 : MAT_FOLIAGE;
   return (
     <group position={[x, 0, z]} scale={s}>
-      <mesh position={[0, 0.7, 0]}  castShadow geometry={GEO_TRUNK}      material={MAT_TRUNK}             />
-      <mesh position={[0, 2.35, 0]} castShadow geometry={GEO_LEAVES_LG}  material={alt ? MAT_FOLIAGE2 : MAT_FOLIAGE} />
+      <mesh position={[0, 0.7, 0]}  castShadow geometry={GEO_TRUNK}  material={MAT_TRUNK} />
+      <group position={[0, 2.3, 0]}>
+        <mesh position={[0, 0.5, 0]}       castShadow geometry={GEO_LEAF_1} material={mat} />
+        <mesh position={[-0.6, 0.0, -0.4]} castShadow geometry={GEO_LEAF_2} material={mat} />
+        <mesh position={[0.6, -0.2, 0.4]}  castShadow geometry={GEO_LEAF_3} material={mat} />
+      </group>
     </group>
   );
 }
@@ -338,37 +345,51 @@ export default function EntrancePark() {
 
   // ── Flat ground-layer geometry (2D X-Y, parent rotates to world floor) ────
   const groundGeoms = useMemo(() => {
-    const ext = (shape: THREE.Shape, depth = 0.1, bevel = false) =>
-      new THREE.ExtrudeGeometry(shape, {
+    const ext = (shapes: THREE.Shape | THREE.Shape[], depth = 0.1, bevel = false) =>
+      new THREE.ExtrudeGeometry(shapes, {
         steps: 1, depth, bevelEnabled: bevel,
         bevelThickness: 0.2, bevelSize: 0.2, bevelSegments: 1,
       });
+
+    const addRect = (arr: THREE.Shape[], x1: number, y1: number, x2: number, y2: number) => {
+      const s = new THREE.Shape();
+      s.moveTo(x1, y1); s.lineTo(x2, y1); s.lineTo(x2, y2); s.lineTo(x1, y2); s.lineTo(x1, y1);
+      arr.push(s);
+    };
 
     // 1. Full grass base
     const grass = new THREE.Shape();
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Short paved entry path from the gate on the back wall
-    const entryPath = new THREE.Shape();
-    entryPath.moveTo(W/2 - 1.5, D); entryPath.lineTo(W/2 + 1.5, D);
-    entryPath.lineTo(W/2 + 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D);
+    // 2. Pathway Network (Entry, left loop, right connection)
+    const paths: THREE.Shape[] = [];
+    addRect(paths, 12.5, 23.0, 14.5, D);        // Main entry path from gate
+    addRect(paths, 5.0, 21.0, 20.0, 23.0);      // Horizontal crossbar
+    
+    // Left loop (Around Pergola)
+    addRect(paths, 3.0, 9.0, 5.0, 23.0);        // Left vertical
+    addRect(paths, 10.0, 9.0, 12.0, 23.0);      // Right vertical
+    addRect(paths, 3.0, 9.0, 12.0, 11.0);       // Bottom horizontal
 
-    // 3. Rubber play surface (upper zone)
-    const rubber = new THREE.Shape();
-    rubber.moveTo(3.5, D*0.57); rubber.lineTo(W-3.5, D*0.57);
-    rubber.lineTo(W-3.5, D-3.2); rubber.lineTo(3.5, D-3.2); rubber.lineTo(3.5, D*0.57);
+    // Right connection to playground
+    addRect(paths, 18.0, 13.0, 20.0, 21.0);     // Right vertical side path
 
-    // 4. Sandbox fill
-    const sand = new THREE.Shape();
-    sand.moveTo(W/2-2.2, D*0.20); sand.lineTo(W/2+2.2, D*0.20);
-    sand.lineTo(W/2+2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20);
+    // 3. Circular Play Area (Rubber)
+    const rubberShapes: THREE.Shape[] = [];
+    const playArea = new THREE.Shape();
+    playArea.absarc(20.0, 16.0, 6.0, 0, Math.PI * 2, false);
+    rubberShapes.push(playArea);
+
+    // 4. Sandbox (Sand)
+    const sandShapes: THREE.Shape[] = [];
+    addRect(sandShapes, 6.0, 24.5, 9.0, 27.5);
 
     return {
-      grass:      ext(grass,      0.10, true),
-      entryPath:  ext(entryPath,  0.14, false),
-      rubber:     ext(rubber,     0.16, false),
-      sand:       ext(sand,       0.18, false),
+      grass:      ext(grass,        0.10, true),
+      entryPath:  ext(paths,        0.14, false),
+      rubber:     ext(rubberShapes, 0.16, false),
+      sand:       ext(sandShapes,   0.18, false),
     };
   }, []);
 
@@ -376,14 +397,14 @@ export default function EntrancePark() {
     const out: Array<{ x: number; z: number; s: number; alt: boolean }> = [];
     const ss = [0.9, 1.0, 0.85, 1.05, 0.95, 0.9, 1.0, 0.85, 1.05, 0.9, 0.85, 1.0, 0.95, 0.88];
     let i = 0;
-    // Trees moved inward slightly to clear the compound wall and perimeter path
-    for (let x = 3.5; x < W; x += 5.5) {
-      out.push({ x, z: 3.5,     s: ss[i++ % ss.length], alt: i % 3 === 0 });
-      out.push({ x, z: D - 3.5, s: ss[i++ % ss.length], alt: i % 3 === 1 });
+    // Left and Right edges
+    for (let z = 2.0; z < D - 2.0; z += 5.0) {
+      out.push({ x: 1.8, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
+      out.push({ x: W - 1.8, z, s: ss[i++ % ss.length], alt: i % 3 === 1 });
     }
-    for (let z = 8.0; z < D - 7.0; z += 7.0) {
-      out.push({ x: 3.5,     z, s: ss[i++ % ss.length], alt: i % 3 === 2 });
-      out.push({ x: W - 3.5, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
+    // Top edge (Front of park, Z ~ 1.5)
+    for (let x = 6.0; x < W - 5.0; x += 5.5) {
+      out.push({ x, z: 1.8, s: ss[i++ % ss.length], alt: i % 3 === 2 });
     }
     return out;
   }, []);
@@ -418,33 +439,33 @@ export default function EntrancePark() {
         <Shrub x={W/2 - 4.5} z={-(D * 0.40)} />
         <Shrub x={W/2 + 4.5} z={-(D * 0.40)} />
 
-        {/* Flower bed discs (flat circles near pergola) */}
-        <mesh position={[W/2-5.5, 0.05, -(D*0.29)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
-        <mesh position={[W/2+5.5, 0.05, -(D*0.29)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
-        <mesh position={[W/2-5.5, 0.05, -(D*0.41)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
-        <mesh position={[W/2+5.5, 0.05, -(D*0.41)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        {/* Flower beds */}
+        <mesh position={[5.0, 0.05, -24.5]}  rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        <mesh position={[10.0, 0.05, -24.5]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
 
-        {/* Park lamp posts — along spine, offset left/right */}
-        <LampPost x={W/2 - 1.8} z={-(D * 0.18)} />
-        <LampPost x={W/2 + 1.8} z={-(D * 0.45)} />
-        <LampPost x={W/2 - 1.8} z={-(D * 0.72)} />
+        {/* Park lamp posts */}
+        <LampPost x={4.0} z={-9.0} />
+        <LampPost x={11.0} z={-9.0} />
+        <LampPost x={4.0} z={-23.0} />
+        <LampPost x={11.0} z={-23.0} />
+        <LampPost x={20.0} z={-22.0} />
+        <LampPost x={20.0} z={-10.0} />
+        <LampPost x={13.5} z={-28.0} />
 
         {/* Benches */}
-        <Bench x={4.5}     z={-(D * 0.48)} ry={Math.PI / 2}  />
-        <Bench x={W - 4.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
-        <Bench x={W/2 - 4} z={-(D * 0.52)}                   />
-        <Bench x={W/2 + 4} z={-(D * 0.52)} ry={Math.PI}      />
+        <Bench x={4.0}  z={-16.0} ry={Math.PI / 2} />
+        <Bench x={11.0} z={-16.0} ry={-Math.PI / 2} />
+        <Bench x={7.5}  z={-10.0} ry={0} />
+        <Bench x={13.5} z={-25.0} ry={Math.PI} />
 
-        {/* Pergola */}
-        <Pergola x={W / 2} z={-(D * 0.35)} />
+        {/* Left Zone: Pergola & Sandbox */}
+        <Pergola x={7.5} z={-16.0} />
+        <Sandbox x={7.5} z={-26.0} />
 
-        {/* Play equipment */}
-        <PlayStructure x={W/2 - 5.0} z={-(D * 0.77)} />
-        <SwingSet      x={W/2 + 5.5} z={-(D * 0.77)} ry={Math.PI / 2} />
-        <SeeSaw        x={W/2 - 1.0} z={-(D * 0.68)} />
-
-        {/* Sandbox */}
-        <Sandbox x={W / 2} z={-(D * 0.285)} />
+        {/* Right Zone: Circular Play Equipment */}
+        <PlayStructure x={18.0} z={-16.0} />
+        <SwingSet      x={22.0} z={-15.0} ry={Math.PI / 2} />
+        <SeeSaw        x={20.0} z={-19.0} />
 
       </group>
     </group>
