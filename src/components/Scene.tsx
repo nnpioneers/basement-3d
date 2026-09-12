@@ -215,21 +215,30 @@ function CameraManager({
       const anim = animatingToRef.current;
       tmpTarget.set(anim[0], anim[1], anim[2]);
       const targetDist = (controls as any).target.distanceTo(tmpTarget);
+      
+      const isMobile = isMobileRef.current;
+      const camOffsetY = isMobile ? 95 : 65;
+      const camOffsetZ = isMobile ? 55 : 35;
+      tmpCamPos.set(anim[0], anim[1] + camOffsetY, anim[2] + camOffsetZ);
+
+      const camDist = camera.position.distanceTo(tmpCamPos);
 
       (controls as any).enabled = false;
 
-      if (targetDist > 0.5) {
-        (controls as any).target.lerp(tmpTarget, delta * 5);
-        const isMobile = isMobileRef.current;
-        const camOffsetY = isMobile ? 85 : 65;
-        const camOffsetZ = isMobile ? 45 : 35;
-        tmpCamPos.set(anim[0], anim[1] + camOffsetY, anim[2] + camOffsetZ);
-        camera.position.lerp(tmpCamPos, delta * 5);
+      // Allow a tiny bit more tolerance (1.0 instead of 0.5) to avoid micro-jitter at the end
+      if (targetDist > 1.0 || camDist > 1.0) {
+        // Use smooth damp-like lerp to avoid snapping
+        (controls as any).target.lerp(tmpTarget, delta * 6);
+        camera.position.lerp(tmpCamPos, delta * 6);
         (controls as any).update();
         needsUpdate = true;
       } else {
+        // Snap to exact position at the very end to ensure stability
+        (controls as any).target.copy(tmpTarget);
+        camera.position.copy(tmpCamPos);
         animatingToRef.current = null;
         (controls as any).enabled = true;
+        needsUpdate = true;
       }
     }
 
@@ -247,7 +256,10 @@ export default function Scene() {
   const [resetViewCount, setResetViewCount] = useState(0);
   const [resetHeadingCount, setResetHeadingCount] = useState(0);
   const [plotStatusMap, setPlotStatusMap] = useState<PlotStatusMap>({});
-  const [, setDpr] = useState<[number, number]>([1, 2]);
+  
+  // Initialize DPR based on device type. 1.5 gives sharp mobile clarity without the cost of 2.0.
+  const initialMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [dpr, setDpr] = useState<[number, number]>(initialMobile ? [1, 1.5] : [1, 2]);
 
   // Stable mobile ref — not re-derived each render
   const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -300,7 +312,7 @@ export default function Scene() {
       <Canvas
         frameloop="demand"
         shadows={!isMobile}
-        dpr={isMobile ? [0.75, 1.25] : [1, 2]}
+        dpr={dpr}
         camera={{
           position: isMobile ? [0, 560, 180] : [0, 420, 140],
           fov: 45,
@@ -315,7 +327,10 @@ export default function Scene() {
           stencil: false,
         }}
       >
-        <PerformanceMonitor onIncline={() => setDpr(isMobile ? [0.75, 1.25] : [1, 2])} onDecline={() => setDpr(isMobile ? [0.75, 1] : [1, 1])}>
+        <PerformanceMonitor 
+          onIncline={() => setDpr(isMobile ? [1, 1.5] : [1, 2])} 
+          onDecline={() => setDpr(isMobile ? [0.75, 1] : [1, 1])}
+        >
         <Suspense fallback={null}>
         <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
 

@@ -231,6 +231,8 @@ const InteractivePlotComponent = ({
         geometry={geom}
         material={getPlotMaterial(currentColor)}
         onClick={(e) => {
+          // CRITICAL MOBILE FIX: If the user dragged their finger (delta > 2), ignore the click!
+          if (e.delta > 2) return;
           e.stopPropagation();
           onClick(plot.id, worldPos);
         }}
@@ -247,6 +249,7 @@ const InteractivePlotComponent = ({
       >
         {/* Inner black border — always visible */}
         <Line
+          raycast={() => null}
           points={innerLine}
           color="#000000"
           lineWidth={isSelected ? 2.2 : 1.5}
@@ -256,6 +259,7 @@ const InteractivePlotComponent = ({
       {/* ── White selection boundary line (exact plot perimeter) ── */}
       {isSelected && (
         <Line
+          raycast={() => null}
           points={boundaryLine}
           color="#ffffff"
           lineWidth={1.6}
