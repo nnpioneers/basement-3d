@@ -1,6 +1,6 @@
 /**
  * EntrancePark.tsx — Children's Park (Entrance-Side)
- * TASK 4: Finalization — Compound Wall, Dedicated Entrance Gate, Internal Pathways
+ * TASK: Finalization — Perimeter pathway loop, gate on front wall facing 9.0m road.
  *
  * Mobile-first rules preserved:
  *  - All materials at module level (allocated ONCE)
@@ -262,25 +262,25 @@ function CompoundWall() {
   const cy = WALL_HEIGHT + 0.05;
   const hy = 0.2; // Hedge height/2
   
-  // The gate is on the back wall (Z = -D, inside the layout), centered at X = W/2.
+  // Gate on the front wall (facing 9.0m road) at the center.
   const gapW = 3.0;
-  const backW = (W - gapW) / 2;
+  const frontW = (W - gapW) / 2;
 
-  // Back wall left of gate
-  const bwL_geom = new THREE.BoxGeometry(backW, WALL_HEIGHT, WALL_THICK);
-  const bwL_cap = new THREE.BoxGeometry(backW + 0.08, 0.1, WALL_THICK + 0.08);
-  // Back wall right of gate
-  const bwR_geom = new THREE.BoxGeometry(backW, WALL_HEIGHT, WALL_THICK);
-  const bwR_cap = new THREE.BoxGeometry(backW + 0.08, 0.1, WALL_THICK + 0.08);
+  // Front wall left of gate
+  const fwL_geom = new THREE.BoxGeometry(frontW, WALL_HEIGHT, WALL_THICK);
+  const fwL_cap = new THREE.BoxGeometry(frontW + 0.08, 0.1, WALL_THICK + 0.08);
+  // Front wall right of gate
+  const fwR_geom = new THREE.BoxGeometry(frontW, WALL_HEIGHT, WALL_THICK);
+  const fwR_cap = new THREE.BoxGeometry(frontW + 0.08, 0.1, WALL_THICK + 0.08);
 
   return (
     <group>
-      {/* Front Wall & Hedges (Solid facing 9.0m road) */}
-      <mesh position={[W/2, y, 0]} geometry={GEO_WALL_LONG} material={MAT_WALL} />
-      <mesh position={[W/2, cy, 0]} geometry={GEO_WALL_CAP_L} material={MAT_WALL_CAP} />
-      <mesh position={[W/2, hy, 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
-      <mesh position={[W/2, hy, -0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
-
+      {/* Back Wall & Hedges */}
+      <mesh position={[W/2, y, -D]} geometry={GEO_WALL_LONG} material={MAT_WALL} />
+      <mesh position={[W/2, cy, -D]} geometry={GEO_WALL_CAP_L} material={MAT_WALL_CAP} />
+      <mesh position={[W/2, hy, -D + 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
+      <mesh position={[W/2, hy, -D - 0.4]} geometry={GEO_HEDGE_LONG} material={MAT_SHRUB} />
+      
       {/* Left Wall & Hedges */}
       <mesh position={[0, y, -D/2]} geometry={GEO_WALL_SHORT} material={MAT_WALL} />
       <mesh position={[0, cy, -D/2]} geometry={GEO_WALL_CAP_S} material={MAT_WALL_CAP} />
@@ -293,16 +293,16 @@ function CompoundWall() {
       <mesh position={[W - 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
       <mesh position={[W + 0.4, hy, -D/2]} geometry={GEO_HEDGE_SHORT} material={MAT_SHRUB} />
 
-      {/* Back Wall (with gate gap) */}
-      <mesh position={[backW/2, y, -D]} geometry={bwL_geom} material={MAT_WALL} />
-      <mesh position={[backW/2, cy, -D]} geometry={bwL_cap} material={MAT_WALL_CAP} />
-      <mesh position={[backW/2, hy, -D + 0.4]} geometry={new THREE.BoxGeometry(backW, 0.4, 0.4)} material={MAT_SHRUB} />
-      <mesh position={[backW/2, hy, -D - 0.4]} geometry={new THREE.BoxGeometry(backW, 0.4, 0.4)} material={MAT_SHRUB} />
+      {/* Front Wall (with gate gap at center) */}
+      <mesh position={[frontW/2, y, 0]} geometry={fwL_geom} material={MAT_WALL} />
+      <mesh position={[frontW/2, cy, 0]} geometry={fwL_cap} material={MAT_WALL_CAP} />
+      <mesh position={[frontW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(frontW, 0.4, 0.4)} material={MAT_SHRUB} />
+      <mesh position={[frontW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(frontW, 0.4, 0.4)} material={MAT_SHRUB} />
 
-      <mesh position={[W - backW/2, y, -D]} geometry={bwR_geom} material={MAT_WALL} />
-      <mesh position={[W - backW/2, cy, -D]} geometry={bwR_cap} material={MAT_WALL_CAP} />
-      <mesh position={[W - backW/2, hy, -D + 0.4]} geometry={new THREE.BoxGeometry(backW, 0.4, 0.4)} material={MAT_SHRUB} />
-      <mesh position={[W - backW/2, hy, -D - 0.4]} geometry={new THREE.BoxGeometry(backW, 0.4, 0.4)} material={MAT_SHRUB} />
+      <mesh position={[W - frontW/2, y, 0]} geometry={fwR_geom} material={MAT_WALL} />
+      <mesh position={[W - frontW/2, cy, 0]} geometry={fwR_cap} material={MAT_WALL_CAP} />
+      <mesh position={[W - frontW/2, hy, 0.4]} geometry={new THREE.BoxGeometry(frontW, 0.4, 0.4)} material={MAT_SHRUB} />
+      <mesh position={[W - frontW/2, hy, -0.4]} geometry={new THREE.BoxGeometry(frontW, 0.4, 0.4)} material={MAT_SHRUB} />
     </group>
   );
 }
@@ -312,16 +312,16 @@ function EntranceGate() {
   const py = 1.6 / 2;
   const cy = 1.6 + 0.07;
   return (
-    <group position={[W/2, 0, -D]}>
-      {/* Left Pillar (looking from outside back road) */}
-      <mesh position={[1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
-      <mesh position={[1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
-      <LampPost x={1.5} z={0} py={1.67} />
-      
-      {/* Right Pillar */}
+    <group position={[W/2, 0, 0]}>
+      {/* Left Pillar */}
       <mesh position={[-1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
       <mesh position={[-1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
       <LampPost x={-1.5} z={0} py={1.67} />
+      
+      {/* Right Pillar */}
+      <mesh position={[1.5, py, 0]} geometry={GEO_GATE_PILLAR} material={MAT_WALL} />
+      <mesh position={[1.5, cy, 0]} geometry={GEO_GATE_PILLAR_C} material={MAT_WALL_CAP} />
+      <LampPost x={1.5} z={0} py={1.67} />
 
       {/* Metal Gate (centered between pillars) */}
       <mesh position={[0, 0.5, 0]} geometry={GEO_GATE_BAR_H} material={MAT_METAL} />
@@ -349,15 +349,28 @@ export default function EntrancePark() {
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Short paved entry path from the gate on the back wall
-    const entryPath = new THREE.Shape();
-    entryPath.moveTo(W/2 - 1.5, D); entryPath.lineTo(W/2 + 1.5, D);
-    entryPath.lineTo(W/2 + 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D);
+    // 2. Loop pathway that splits at the entrance and goes around the perimeter
+    const loopPath = new THREE.Shape();
+    // Outer boundary of the loop path (starts at gate Y=0)
+    loopPath.moveTo(W/2 - 1.5, 0); 
+    loopPath.lineTo(1.5, 0); 
+    loopPath.lineTo(1.5, D - 1.5); 
+    loopPath.lineTo(W - 1.5, D - 1.5); 
+    loopPath.lineTo(W - 1.5, 0);
+    loopPath.lineTo(W/2 + 1.5, 0);
+    // Inner boundary of the loop path (cuts out the center)
+    loopPath.lineTo(W/2 + 1.5, 2.5);
+    loopPath.lineTo(W - 3.5, 2.5);
+    loopPath.lineTo(W - 3.5, D - 3.5);
+    loopPath.lineTo(3.5, D - 3.5);
+    loopPath.lineTo(3.5, 2.5);
+    loopPath.lineTo(W/2 - 1.5, 2.5);
+    loopPath.lineTo(W/2 - 1.5, 0);
 
     // 3. Rubber play surface (upper zone)
     const rubber = new THREE.Shape();
-    rubber.moveTo(3.5, D*0.57); rubber.lineTo(W-3.5, D*0.57);
-    rubber.lineTo(W-3.5, D-3.2); rubber.lineTo(3.5, D-3.2); rubber.lineTo(3.5, D*0.57);
+    rubber.moveTo(4.5, D*0.57); rubber.lineTo(W-4.5, D*0.57);
+    rubber.lineTo(W-4.5, D-4.2); rubber.lineTo(4.5, D-4.2); rubber.lineTo(4.5, D*0.57);
 
     // 4. Sandbox fill
     const sand = new THREE.Shape();
@@ -366,7 +379,7 @@ export default function EntrancePark() {
 
     return {
       grass:      ext(grass,      0.10, true),
-      entryPath:  ext(entryPath,  0.14, false),
+      loopPath:   ext(loopPath,   0.14, false),
       rubber:     ext(rubber,     0.16, false),
       sand:       ext(sand,       0.18, false),
     };
@@ -376,14 +389,14 @@ export default function EntrancePark() {
     const out: Array<{ x: number; z: number; s: number; alt: boolean }> = [];
     const ss = [0.9, 1.0, 0.85, 1.05, 0.95, 0.9, 1.0, 0.85, 1.05, 0.9, 0.85, 1.0, 0.95, 0.88];
     let i = 0;
-    // Trees moved inward slightly to clear the compound wall and perimeter path
-    for (let x = 3.5; x < W; x += 5.5) {
-      out.push({ x, z: 3.5,     s: ss[i++ % ss.length], alt: i % 3 === 0 });
-      out.push({ x, z: D - 3.5, s: ss[i++ % ss.length], alt: i % 3 === 1 });
+    // Trees moved inward slightly to clear the loop path
+    for (let x = 4.5; x < W; x += 5.5) {
+      out.push({ x, z: 4.5,     s: ss[i++ % ss.length], alt: i % 3 === 0 });
+      out.push({ x, z: D - 4.5, s: ss[i++ % ss.length], alt: i % 3 === 1 });
     }
-    for (let z = 8.0; z < D - 7.0; z += 7.0) {
-      out.push({ x: 3.5,     z, s: ss[i++ % ss.length], alt: i % 3 === 2 });
-      out.push({ x: W - 3.5, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
+    for (let z = 9.0; z < D - 8.0; z += 7.0) {
+      out.push({ x: 4.5,     z, s: ss[i++ % ss.length], alt: i % 3 === 2 });
+      out.push({ x: W - 4.5, z, s: ss[i++ % ss.length], alt: i % 3 === 0 });
     }
     return out;
   }, []);
@@ -392,7 +405,7 @@ export default function EntrancePark() {
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
       <mesh geometry={groundGeoms.grass}      material={MAT_GRASS}   receiveShadow />
-      <mesh geometry={groundGeoms.entryPath}  material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.loopPath}   material={MAT_PATH}    receiveShadow />
       <mesh geometry={groundGeoms.rubber}     material={MAT_RUBBER}  receiveShadow />
       <mesh geometry={groundGeoms.sand}       material={MAT_SAND}    receiveShadow />
 
@@ -424,14 +437,16 @@ export default function EntrancePark() {
         <mesh position={[W/2-5.5, 0.05, -(D*0.41)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
         <mesh position={[W/2+5.5, 0.05, -(D*0.41)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
 
-        {/* Park lamp posts — along spine, offset left/right */}
+        {/* Park lamp posts — along the loop path inner edge */}
         <LampPost x={W/2 - 1.8} z={-(D * 0.18)} />
         <LampPost x={W/2 + 1.8} z={-(D * 0.45)} />
         <LampPost x={W/2 - 1.8} z={-(D * 0.72)} />
+        <LampPost x={3.5} z={-(D * 0.5)} />
+        <LampPost x={W - 3.5} z={-(D * 0.5)} />
 
         {/* Benches */}
-        <Bench x={4.5}     z={-(D * 0.48)} ry={Math.PI / 2}  />
-        <Bench x={W - 4.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
+        <Bench x={5.5}     z={-(D * 0.48)} ry={Math.PI / 2}  />
+        <Bench x={W - 5.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
         <Bench x={W/2 - 4} z={-(D * 0.52)}                   />
         <Bench x={W/2 + 4} z={-(D * 0.52)} ry={Math.PI}      />
 
