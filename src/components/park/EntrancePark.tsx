@@ -21,6 +21,7 @@ const D = 37.65;
 // ── Refined Color Palette — Professional Residential Park ─────────────────────
 const C_GRASS        = '#4f7a38';   // natural turf green
 const C_GRASS_DARK   = '#3d6028';   // slightly deeper (used for shrubs)
+const C_LAWN_LIGHT   = '#62924a';   // lighter turf for center lawn zone
 const C_PATH         = '#c4c4b8';   // warm concrete grey
 const C_RUBBER       = '#b55625';   // terracotta orange — professional, not cartoon
 const C_SAND         = '#c8a458';   // natural sandy beige
@@ -40,6 +41,8 @@ const C_METAL        = '#5a5a5a';   // dark steel (chains, ladder)
 const C_LAMP_POST    = '#383838';   // matte dark iron
 const C_LAMP_GLOW    = '#f5e8c0';   // warm cream lantern cap
 const C_SLAB         = '#8a9090';   // cool grey for fulcrum/supports
+const C_FLOWER       = '#d4784a';   // warm terracotta flower bed color
+const C_CORNER_PILLAR = '#aaaaaa';  // light stone/concrete corner pillars
 
 // ── Module-level Materials (allocated ONCE) ───────────────────────────────────
 const MAT_GRASS    = new THREE.MeshStandardMaterial({ color: C_GRASS,        roughness: 0.92, metalness: 0 });
@@ -61,9 +64,12 @@ const MAT_PERG_BM  = new THREE.MeshStandardMaterial({ color: C_PERGOLA_BEAM, rou
 const MAT_PERG_RF  = new THREE.MeshStandardMaterial({ color: C_PERGOLA_ROOF, roughness: 0.84 });
 const MAT_METAL    = new THREE.MeshStandardMaterial({ color: C_METAL,        roughness: 0.5, metalness: 0.7 });
 const MAT_LAMP     = new THREE.MeshStandardMaterial({ color: C_LAMP_POST,    roughness: 0.5, metalness: 0.8 });
-const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,    roughness: 0.7  });
-const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,         roughness: 0.8  });
-const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,   roughness: 0.92 });
+const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,     roughness: 0.7  });
+const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,          roughness: 0.8  });
+const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,    roughness: 0.92 });
+const MAT_LAWN_LT  = new THREE.MeshStandardMaterial({ color: C_LAWN_LIGHT,   roughness: 0.92 });
+const MAT_FLOWER   = new THREE.MeshStandardMaterial({ color: C_FLOWER,        roughness: 0.88 });
+const MAT_PILLAR   = new THREE.MeshStandardMaterial({ color: C_CORNER_PILLAR, roughness: 0.85 });
 
 // ── Module-level Geometries (allocated ONCE) ──────────────────────────────────
 // Tree
@@ -80,6 +86,10 @@ const GEO_BENCH_LEG  = new THREE.BoxGeometry(0.09, 0.38, 0.38);
 const GEO_LAMP_POST  = new THREE.CylinderGeometry(0.055, 0.07, 3.2, 5, 1);
 const GEO_LAMP_ARM   = new THREE.BoxGeometry(0.8, 0.07, 0.07);
 const GEO_LAMP_HEAD  = new THREE.BoxGeometry(0.32, 0.18, 0.32);
+const GEO_LAMP_DOME  = new THREE.SphereGeometry(0.18, 5, 4);
+// Flower bed & corner pillar
+const GEO_FLOWER_BED = new THREE.CircleGeometry(1.1, 7);
+const GEO_CORNER_PIL = new THREE.CylinderGeometry(0.22, 0.25, 0.8, 5, 1);
 // Pergola
 const GEO_PERG_POST  = new THREE.CylinderGeometry(0.14, 0.14, 2.8, 5, 1);
 const GEO_PERG_BEAM  = new THREE.BoxGeometry(7.2, 0.16, 0.22);
@@ -141,14 +151,15 @@ function Bench({ x, z, ry = 0 }: { x: number; z: number; ry?: number }) {
   );
 }
 
-/** Warm outdoor park lamp post */
+/** Warm outdoor park lamp post with domed lantern */
 function LampPost({ x, z }: { x: number; z: number }) {
   const ph = 3.2;
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, ph / 2, 0]}       geometry={GEO_LAMP_POST} material={MAT_LAMP}    castShadow />
-      <mesh position={[0.4, ph - 0.08, 0]}  geometry={GEO_LAMP_ARM}  material={MAT_LAMP}               />
-      <mesh position={[0.8, ph - 0.05, 0]}  geometry={GEO_LAMP_HEAD} material={MAT_LAMP_CAP}            />
+      <mesh position={[0, ph / 2, 0]}      geometry={GEO_LAMP_POST} material={MAT_LAMP}    castShadow />
+      <mesh position={[0.4, ph - 0.08, 0]} geometry={GEO_LAMP_ARM}  material={MAT_LAMP}               />
+      <mesh position={[0.8, ph - 0.05, 0]} geometry={GEO_LAMP_HEAD} material={MAT_LAMP_CAP}           />
+      <mesh position={[0.8, ph + 0.07, 0]} geometry={GEO_LAMP_DOME} material={MAT_LAMP}               />
     </group>
   );
 }
@@ -300,12 +311,25 @@ export default function EntrancePark() {
     sand.moveTo(W/2-2.2, D*0.20); sand.lineTo(W/2+2.2, D*0.20);
     sand.lineTo(W/2+2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20);
 
+    // 6. Center lawn (lighter green mid zone — between sandbox and rubber)
+    const centerLawn = new THREE.Shape();
+    centerLawn.moveTo(2.5, D*0.30); centerLawn.lineTo(W-2.5, D*0.30);
+    centerLawn.lineTo(W-2.5, D*0.54); centerLawn.lineTo(2.5, D*0.54);
+    centerLawn.lineTo(2.5, D*0.30);
+    // Punch out sandbox area from center lawn so sand shows through
+    const sbHole = new THREE.Path();
+    sbHole.moveTo(W/2-2.2, D*0.20); sbHole.lineTo(W/2+2.2, D*0.20);
+    sbHole.lineTo(W/2+2.2, D*0.20+4.4); sbHole.lineTo(W/2-2.2, D*0.20+4.4);
+    sbHole.lineTo(W/2-2.2, D*0.20);
+    centerLawn.holes.push(sbHole);
+
     return {
-      grass:  ext(grass,   0.10, true),
-      path:   ext(pathRing, 0.14, false),
-      spine:  ext(spine,   0.14, false),
-      rubber: ext(rubber,  0.16, false),
-      sand:   ext(sand,    0.18, false),
+      grass:      ext(grass,      0.10, true),
+      path:       ext(pathRing,   0.14, false),
+      spine:      ext(spine,      0.14, false),
+      rubber:     ext(rubber,     0.16, false),
+      sand:       ext(sand,       0.18, false),
+      centerLawn: ext(centerLawn, 0.13, false),
     };
   }, []);
 
@@ -328,11 +352,18 @@ export default function EntrancePark() {
   return (
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
-      <mesh geometry={groundGeoms.grass}  material={MAT_GRASS}  receiveShadow />
-      <mesh geometry={groundGeoms.path}   material={MAT_PATH}   receiveShadow />
-      <mesh geometry={groundGeoms.spine}  material={MAT_PATH}   receiveShadow />
-      <mesh geometry={groundGeoms.rubber} material={MAT_RUBBER} receiveShadow />
-      <mesh geometry={groundGeoms.sand}   material={MAT_SAND}   receiveShadow />
+      <mesh geometry={groundGeoms.grass}      material={MAT_GRASS}   receiveShadow />
+      <mesh geometry={groundGeoms.centerLawn} material={MAT_LAWN_LT} receiveShadow />
+      <mesh geometry={groundGeoms.path}       material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.spine}      material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.rubber}     material={MAT_RUBBER}  receiveShadow />
+      <mesh geometry={groundGeoms.sand}       material={MAT_SAND}    receiveShadow />
+
+      {/* ── Flower beds (2D flat discs, rendered in XY parent space) ─────── */}
+      {/* These sit in the 2D XY parent space and will be laid flat by parent rotation */}
+      {/* Position near pergola base and entry area */}
+      {/* NOTE: In 2D parent space: X=park width, Y=park depth, Z=height */}
+      {/* So flower beds need a Z offset to float above the ground */}
 
       {/* ── 3D equipment group (rotation restores Y-up orientation) ────── */}
       <group position={[0, 0, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
@@ -352,6 +383,22 @@ export default function EntrancePark() {
         <Shrub x={W/2 + 4.5} z={-(D * 0.40)} />
         <Shrub x={W/2 - 3.5} z={-(D * 0.10)} />
         <Shrub x={W/2 + 3.5} z={-(D * 0.10)} />
+
+        {/* Corner stone pillars — inner boundary corners */}
+        <mesh position={[2.5,   0.4, -2.5]}         geometry={GEO_CORNER_PIL} material={MAT_PILLAR} />
+        <mesh position={[W-2.5, 0.4, -2.5]}         geometry={GEO_CORNER_PIL} material={MAT_PILLAR} />
+        <mesh position={[2.5,   0.4, -(D-2.5)]}     geometry={GEO_CORNER_PIL} material={MAT_PILLAR} />
+        <mesh position={[W-2.5, 0.4, -(D-2.5)]}     geometry={GEO_CORNER_PIL} material={MAT_PILLAR} />
+
+        {/* Flower bed discs (flat circles rotated horizontal near pergola) */}
+        <mesh position={[W/2-5.5, 0.22, -(D*0.29)]} rotation={[-Math.PI/2,0,0]}
+              geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        <mesh position={[W/2+5.5, 0.22, -(D*0.29)]} rotation={[-Math.PI/2,0,0]}
+              geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        <mesh position={[W/2-5.5, 0.22, -(D*0.41)]} rotation={[-Math.PI/2,0,0]}
+              geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
+        <mesh position={[W/2+5.5, 0.22, -(D*0.41)]} rotation={[-Math.PI/2,0,0]}
+              geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
 
         {/* Park lamp posts — along spine, offset left/right alternately */}
         <LampPost x={W/2 - 1.8} z={-(D * 0.18)} />
