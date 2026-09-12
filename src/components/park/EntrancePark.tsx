@@ -349,15 +349,42 @@ export default function EntrancePark() {
     grass.moveTo(0, 0); grass.lineTo(W, 0);
     grass.lineTo(W, D); grass.lineTo(0, D); grass.lineTo(0, 0);
 
-    // 2. Short paved entry path from the gate on the back wall
-    const entryPath = new THREE.Shape();
-    entryPath.moveTo(W/2 - 1.5, D); entryPath.lineTo(W/2 + 1.5, D);
-    entryPath.lineTo(W/2 + 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D - 2.5); entryPath.lineTo(W/2 - 1.5, D);
+    // 2. Internal Walking Path (Loop with cross path)
+    const walkingPath = new THREE.Shape();
+    
+    // Outer boundary (Counter-clockwise)
+    walkingPath.moveTo(12.0, D);
+    walkingPath.lineTo(15.0, D);
+    walkingPath.lineTo(15.0, 31.75);
+    walkingPath.lineTo(22.75, 31.75);
+    walkingPath.lineTo(22.75, 5.25);
+    walkingPath.lineTo(4.25, 5.25);
+    walkingPath.lineTo(4.25, 31.75);
+    walkingPath.lineTo(12.0, 31.75);
+    walkingPath.lineTo(12.0, D);
+    
+    // Top inner hole (Clockwise)
+    const topHole = new THREE.Path();
+    topHole.moveTo(5.75, 6.75);
+    topHole.lineTo(21.25, 6.75);
+    topHole.lineTo(21.25, 21.25);
+    topHole.lineTo(5.75, 21.25);
+    topHole.lineTo(5.75, 6.75);
+    walkingPath.holes.push(topHole);
+    
+    // Bottom inner hole (Clockwise)
+    const botHole = new THREE.Path();
+    botHole.moveTo(5.75, 22.75);
+    botHole.lineTo(21.25, 22.75);
+    botHole.lineTo(21.25, 30.25);
+    botHole.lineTo(5.75, 30.25);
+    botHole.lineTo(5.75, 22.75);
+    walkingPath.holes.push(botHole);
 
-    // 3. Rubber play surface (upper zone)
+    // 3. Rubber play surface (fits cleanly inside the bottom hole)
     const rubber = new THREE.Shape();
-    rubber.moveTo(3.5, D*0.57); rubber.lineTo(W-3.5, D*0.57);
-    rubber.lineTo(W-3.5, D-3.2); rubber.lineTo(3.5, D-3.2); rubber.lineTo(3.5, D*0.57);
+    rubber.moveTo(6.0, 23.0); rubber.lineTo(21.0, 23.0);
+    rubber.lineTo(21.0, 30.0); rubber.lineTo(6.0, 30.0); rubber.lineTo(6.0, 23.0);
 
     // 4. Sandbox fill
     const sand = new THREE.Shape();
@@ -365,10 +392,10 @@ export default function EntrancePark() {
     sand.lineTo(W/2+2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20+4.4); sand.lineTo(W/2-2.2, D*0.20);
 
     return {
-      grass:      ext(grass,      0.10, true),
-      entryPath:  ext(entryPath,  0.14, false),
-      rubber:     ext(rubber,     0.16, false),
-      sand:       ext(sand,       0.18, false),
+      grass:       ext(grass,       0.10, true),
+      walkingPath: ext(walkingPath, 0.14, false),
+      rubber:      ext(rubber,      0.16, false),
+      sand:        ext(sand,        0.18, false),
     };
   }, []);
 
@@ -391,9 +418,9 @@ export default function EntrancePark() {
   return (
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
-      <mesh geometry={groundGeoms.grass}      material={MAT_GRASS}   receiveShadow />
-      <mesh geometry={groundGeoms.entryPath}  material={MAT_PATH}    receiveShadow />
-      <mesh geometry={groundGeoms.rubber}     material={MAT_RUBBER}  receiveShadow />
+      <mesh geometry={groundGeoms.grass}        material={MAT_GRASS}   receiveShadow />
+      <mesh geometry={groundGeoms.walkingPath}  material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.rubber}       material={MAT_RUBBER}  receiveShadow />
       <mesh geometry={groundGeoms.sand}       material={MAT_SAND}    receiveShadow />
 
       {/* ── 3D equipment group (rotation restores Y-up orientation) ────── */}
@@ -425,13 +452,13 @@ export default function EntrancePark() {
         <mesh position={[W/2+5.5, 0.05, -(D*0.41)]} rotation={[-Math.PI/2,0,0]} geometry={GEO_FLOWER_BED} material={MAT_FLOWER} />
 
         {/* Park lamp posts — along spine, offset left/right */}
-        <LampPost x={W/2 - 1.8} z={-(D * 0.18)} />
+        <LampPost x={W/2 - 1.8} z={-(D * 0.22)} />
         <LampPost x={W/2 + 1.8} z={-(D * 0.45)} />
         <LampPost x={W/2 - 1.8} z={-(D * 0.72)} />
 
         {/* Benches */}
-        <Bench x={4.5}     z={-(D * 0.48)} ry={Math.PI / 2}  />
-        <Bench x={W - 4.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
+        <Bench x={6.5}     z={-(D * 0.48)} ry={Math.PI / 2}  />
+        <Bench x={W - 6.5} z={-(D * 0.48)} ry={-Math.PI / 2} />
         <Bench x={W/2 - 4} z={-(D * 0.52)}                   />
         <Bench x={W/2 + 4} z={-(D * 0.52)} ry={Math.PI}      />
 
