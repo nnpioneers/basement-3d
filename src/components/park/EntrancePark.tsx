@@ -21,7 +21,7 @@ const D = 37.65;
 // ── Refined Color Palette — Professional Residential Park ─────────────────────
 const C_GRASS        = '#4f7a38';   // natural turf green
 const C_GRASS_DARK   = '#3d6028';   // slightly deeper (used for shrubs)
-const C_PATH         = '#c4c4b8';   // warm concrete grey
+const C_PATH         = '#cdad70';   // matching the main park path color
 const C_RUBBER       = '#b55625';   // terracotta orange — professional, not cartoon
 const C_SOIL         = '#6b4b3a';   // natural dark brown earth/soil tone
 const C_EQUIP_BLUE   = '#2b5f8e';   // steel blue — modern play equipment
