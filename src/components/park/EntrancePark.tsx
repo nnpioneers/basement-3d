@@ -39,6 +39,7 @@ const C_METAL        = '#3a3a3a';   // dark steel (chains, ladder, gate)
 const C_LAMP_POST    = '#2a2a2a';   // matte dark iron
 const C_LAMP_GLOW    = '#f5e8c0';   // warm cream lantern cap
 const C_SLAB         = '#8a9090';   // cool grey for fulcrum/supports
+const C_FLOWER       = '#d4784a';   // warm terracotta flower bed color
 const C_WALL         = '#d0d0cc';   // light concrete/stone for compound wall
 const C_WALL_CAP     = '#a0a09c';   // slightly darker cap for the wall
 
@@ -64,17 +65,20 @@ const MAT_LAMP     = new THREE.MeshStandardMaterial({ color: C_LAMP_POST,    rou
 const MAT_LAMP_CAP = new THREE.MeshStandardMaterial({ color: C_LAMP_GLOW,    roughness: 0.7  });
 const MAT_SLAB     = new THREE.MeshStandardMaterial({ color: C_SLAB,         roughness: 0.8  });
 const MAT_SHRUB    = new THREE.MeshStandardMaterial({ color: C_GRASS_DARK,   roughness: 0.92 });
+const MAT_FLOWER   = new THREE.MeshStandardMaterial({ color: C_FLOWER,       roughness: 0.88 });
 const MAT_WALL     = new THREE.MeshStandardMaterial({ color: C_WALL,         roughness: 0.95 });
 const MAT_WALL_CAP = new THREE.MeshStandardMaterial({ color: C_WALL_CAP,     roughness: 0.9  });
 
 // ── Module-level Geometries (allocated ONCE) ──────────────────────────────────
 // Tree
 const GEO_TRUNK      = new THREE.CylinderGeometry(0.14, 0.22, 1.4, 5, 1);
+const GEO_BRANCH     = new THREE.CylinderGeometry(0.04, 0.08, 0.8, 4, 1);
 const GEO_LEAF_1     = new THREE.IcosahedronGeometry(1.2, 1);
 const GEO_LEAF_2     = new THREE.IcosahedronGeometry(1.0, 1);
 const GEO_LEAF_3     = new THREE.IcosahedronGeometry(1.1, 1);
-// Shrub
+// Shrub & Flower
 const GEO_SHRUB      = new THREE.SphereGeometry(0.65, 5, 4);
+const GEO_FLOWER     = new THREE.IcosahedronGeometry(0.2, 0);
 // Bench
 const GEO_BENCH_SEAT = new THREE.BoxGeometry(1.6, 0.1, 0.45);
 const GEO_BENCH_BACK = new THREE.BoxGeometry(1.6, 0.45, 0.09);
@@ -144,11 +148,26 @@ function Tree({ x, z, s = 1.0, alt = false }: { x: number; z: number; s?: number
   return (
     <group position={[x, 0, z]} scale={s}>
       <mesh position={[0, 0.7, 0]}  castShadow geometry={GEO_TRUNK}  material={MAT_TRUNK} />
+      {/* Branches for realism */}
+      <mesh position={[-0.2, 1.3, -0.1]} rotation={[0, 0, 0.6]} geometry={GEO_BRANCH} material={MAT_TRUNK} />
+      <mesh position={[0.2, 1.4, 0.1]} rotation={[0, 0, -0.5]} geometry={GEO_BRANCH} material={MAT_TRUNK} />
+      
       <group position={[0, 2.3, 0]}>
         <mesh position={[0, 0.5, 0]}       castShadow geometry={GEO_LEAF_1} material={mat} />
         <mesh position={[-0.6, 0.0, -0.4]} castShadow geometry={GEO_LEAF_2} material={mat} />
         <mesh position={[0.6, -0.2, 0.4]}  castShadow geometry={GEO_LEAF_3} material={mat} />
+        <mesh position={[-0.1, -0.4, 0.5]} castShadow geometry={GEO_LEAF_2} material={mat} scale={0.7} />
       </group>
+    </group>
+  );
+}
+
+function FlowerCluster({ x, z }: { x: number; z: number }) {
+  return (
+    <group position={[x, 0.1, z]}>
+      <mesh position={[0, 0, 0]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
+      <mesh position={[0.3, 0, 0.2]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
+      <mesh position={[-0.2, 0, 0.3]} geometry={GEO_FLOWER} material={MAT_FLOWER} />
     </group>
   );
 }
@@ -412,11 +431,16 @@ export default function EntrancePark() {
     // Q4: Bottom-Right Sandbox
     addRect(sandShapes, 15.5, 29.0, 22.5, 33.0);
 
+    // 5. Pergola Paved Base
+    const pergolaBaseShapes: THREE.Shape[] = [];
+    addRect(pergolaBaseShapes, 15.0, 21.0, 23.0, 28.0);
+
     return {
-      grass:      ext(grass,        0.10, true),
-      entryPath:  ext(paths,        0.14, false),
-      rubber:     ext(rubberShapes, 0.16, false),
-      sand:       ext(sandShapes,   0.18, false),
+      grass:      ext(grass,             0.10, true),
+      entryPath:  ext(paths,             0.14, false),
+      rubber:     ext(rubberShapes,      0.16, true), // beveled for safety mat look
+      sand:       ext(sandShapes,        0.18, false),
+      pergolaBase:ext(pergolaBaseShapes, 0.12, true),
     };
   }, []);
 
@@ -442,10 +466,11 @@ export default function EntrancePark() {
   return (
     <group>
       {/* ── Flat ground layers ──────────────────────────────────────────── */}
-      <mesh geometry={groundGeoms.grass}      material={MAT_GRASS}   receiveShadow />
-      <mesh geometry={groundGeoms.entryPath}  material={MAT_PATH}    receiveShadow />
-      <mesh geometry={groundGeoms.rubber}     material={MAT_RUBBER}  receiveShadow />
-      <mesh geometry={groundGeoms.sand}       material={MAT_SAND}    receiveShadow />
+      <mesh geometry={groundGeoms.grass}       material={MAT_GRASS}   receiveShadow />
+      <mesh geometry={groundGeoms.entryPath}   material={MAT_PATH}    receiveShadow />
+      <mesh geometry={groundGeoms.rubber}      material={MAT_RUBBER}  receiveShadow />
+      <mesh geometry={groundGeoms.sand}        material={MAT_SAND}    receiveShadow />
+      <mesh geometry={groundGeoms.pergolaBase} material={MAT_PATH}    receiveShadow />
 
       {/* ── 3D equipment group (rotation restores Y-up orientation) ────── */}
       <group position={[0, 0, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
@@ -473,11 +498,20 @@ export default function EntrancePark() {
         <mesh position={[6.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
         <mesh position={[10.5, 0.05, -27.0]} rotation={[0,0,0]} geometry={GEO_PAD} material={MAT_SAND} />
 
-        {/* Shrubs along the central path */}
+        {/* Shrubs along the central paths and corners */}
         <Shrub x={11.5} z={-25.0} />
         <Shrub x={15.5} z={-25.0} />
         <Shrub x={11.5} z={-12.0} />
         <Shrub x={15.5} z={-12.0} />
+        <Shrub x={4.5}  z={-4.5} />
+        <Shrub x={22.5} z={-4.5} />
+
+        {/* Flower clusters adding color accents */}
+        <FlowerCluster x={7.0} z={-25.5} />
+        <FlowerCluster x={10.0} z={-25.5} />
+        <FlowerCluster x={13.5} z={-21.0} />
+        <FlowerCluster x={13.5} z={-16.0} />
+        <FlowerCluster x={20.0} z={-15.5} />
 
         {/* Park lamp posts at intersections */}
         <LampPost x={4.0} z={-17.0} />
