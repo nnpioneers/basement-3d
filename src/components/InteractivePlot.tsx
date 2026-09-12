@@ -172,8 +172,8 @@ const InteractivePlotComponent = ({
   const isSold = status === 'sold';
 
   // ── Colors ───────────────────────────────────────────────────────────────
-  const defaultBgColor  = isSold ? '#8c3a3a' : '#d4b886'; // Richer, darker beige to match reference
-  const hoverBgColor    = isSold ? '#a04848' : '#c2a673';
+  const defaultBgColor  = isSold ? '#8c3a3a' : '#b89b6b'; // Even darker, richer tan
+  const hoverBgColor    = isSold ? '#a04848' : '#9e8254';
   const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep rich blue (#1565C0)
   const currentColor    = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
