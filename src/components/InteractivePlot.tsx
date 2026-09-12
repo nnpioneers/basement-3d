@@ -24,6 +24,7 @@ function formatDimension(val: number): string {
     : `${val.toFixed(1)} m`;
 }
 
+
 const geomCache = new Map<string, THREE.ExtrudeGeometry>();
 
 function getPlotGeom(plot: PlotSpec) {
@@ -59,8 +60,8 @@ const commonTextProps = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WHITE_OUTLINE_Z = 0.40;   // z-height for white outline line
-const LABEL_Z         = 0.60;   // z-height for text labels
+const WHITE_OUTLINE_Z = 0.85;   // z-height for white outline line (clears 0.7 road height)
+const LABEL_Z         = 0.86;   // z-height for text labels (clears 0.7 road height)
 
 const InteractivePlotComponent = ({
   plot,
@@ -171,8 +172,8 @@ const InteractivePlotComponent = ({
   const isSold = status === 'sold';
 
   // ── Colors ───────────────────────────────────────────────────────────────
-  const defaultBgColor  = isSold ? '#8c3a3a' : '#faeed9';
-  const hoverBgColor    = isSold ? '#a04848' : '#ebdcc2';
+  const defaultBgColor  = isSold ? '#8c3a3a' : '#c8b88a'; // Darker tan/beige
+  const hoverBgColor    = isSold ? '#a04848' : '#b3a375';
   const selectedBgColor = isSold ? '#6b2828' : '#1565c0'; // deep rich blue (#1565C0)
   const currentColor    = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
@@ -185,8 +186,8 @@ const InteractivePlotComponent = ({
   const minDim   = Math.min(H, avgDepth);
 
   // Clear, readable size for unselected plots at overview distance
-  const baseNumFontSize = Math.min(3.6, Math.max(2.5, minDim * 0.30));
-  let numFontSize       = isSelected ? baseNumFontSize * 1.15 : baseNumFontSize;
+  const baseNumFontSize = Math.min(5.0, Math.max(3.5, minDim * 0.45));
+  let numFontSize       = isSelected ? baseNumFontSize * 0.65 : baseNumFontSize;
 
   let areaM2FontSize  = numFontSize * 0.42;
   let areaFt2FontSize = numFontSize * 0.36;
@@ -352,7 +353,6 @@ const InteractivePlotComponent = ({
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
             renderOrder={120}
-            depthTest={false}
           >
             {formatDimension(dimAnchors.right.dim)}
           </Text>
@@ -370,7 +370,6 @@ const InteractivePlotComponent = ({
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
             renderOrder={120}
-            depthTest={false}
           >
             {formatDimension(dimAnchors.top.dim)}
           </Text>
@@ -388,7 +387,6 @@ const InteractivePlotComponent = ({
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
             renderOrder={120}
-            depthTest={false}
           >
             {formatDimension(dimAnchors.left.dim)}
           </Text>
@@ -406,7 +404,6 @@ const InteractivePlotComponent = ({
             outlineWidth={dimFontSize * 0.25}
             outlineColor="#ffffff"
             renderOrder={120}
-            depthTest={false}
           >
             {formatDimension(dimAnchors.bot.dim)}
           </Text>

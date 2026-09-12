@@ -195,7 +195,7 @@ export default function RoadNetwork() {
       depth: 0.5,
       bevelEnabled: true,
       bevelThickness: 0.2,
-      bevelSize: 0.2,
+      bevelSize: 0,
       bevelOffset: 0,
       bevelSegments: 4
     };
