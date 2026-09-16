@@ -325,28 +325,80 @@ function CameraManager({
 function ProjectLocationDot({ dotRef }: { dotRef: React.RefObject<THREE.Group | null> }) {
   const { camera } = useThree();
 
+  const { pinGeometry, pinMaterial, ringGeometry, ringMaterial } = useMemo(() => {
+    // 1. Create the Teardrop Shape for the Map Pin
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0); // Bottom point
+    // Right side curve
+    shape.bezierCurveTo(0.2, 0.5, 1.0, 1.0, 1.0, 1.5);
+    // Top semi-circle
+    shape.absarc(0, 1.5, 1.0, 0, Math.PI, false);
+    // Left side curve
+    shape.bezierCurveTo(-1.0, 1.0, -0.2, 0.5, 0, 0);
+
+    // Note: Hole removed to make it a solid red pin as requested
+
+    // Extrude it into 3D
+    const geom = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.4,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      bevelSize: 0.08,
+      bevelThickness: 0.08,
+      curveSegments: 24,
+    });
+    
+    geom.computeVertexNormals();
+    // Center it along the Z axis (thickness) so it stands perfectly upright on the point
+    geom.translate(0, 0, -0.2); 
+    // Scale it to a normalized 1-unit height approx for easier math
+    geom.scale(0.4, 0.4, 0.4); 
+
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: '#e53935', 
+      roughness: 0.3, 
+      metalness: 0.1,
+      depthTest: false,
+      depthWrite: false
+    });
+
+    // 2. Create the Ground Shadow/Spot
+    const rGeom = new THREE.CircleGeometry(0.45, 32);
+    const rMat = new THREE.MeshBasicMaterial({ 
+      color: '#e53935', 
+      transparent: true, 
+      opacity: 0.5,
+      depthTest: false,
+      depthWrite: false
+    });
+
+    return { pinGeometry: geom, pinMaterial: mat, ringGeometry: rGeom, ringMaterial: rMat };
+  }, []);
+
   useFrame(() => {
     if (!dotRef.current || !dotRef.current.visible) return;
     const dist = camera.position.length();
-    // Scale location marker smoothly with camera distance for a clean geographic pin at regional view
-    // Calibrated so the dot is clearly visible on screens (approx 30-40 pixels)
-    const targetScale = Math.max(20, dist * 0.012);
+    // Scale smoothly so it acts like a professional map UI pin
+    const targetScale = Math.max(20, dist * 0.012); 
     dotRef.current.scale.setScalar(targetScale);
   });
 
   return (
     <group ref={dotRef} position={[0, 2.0, -21.65]} visible={false}>
-      {/* Central Yellow Core Dot */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={102}>
-        <circleGeometry args={[1.0, 32]} />
-        <meshBasicMaterial color="#ffcc00" depthTest={false} depthWrite={false} />
-      </mesh>
+      {/* 3D Standing Pin */}
+      <mesh 
+        geometry={pinGeometry} 
+        material={pinMaterial} 
+        renderOrder={102} 
+      />
       
-      {/* Crisp Dark Outline / Stroke (matching the reference image's inset) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} renderOrder={101}>
-        <circleGeometry args={[1.4, 32]} />
-        <meshBasicMaterial color="#1a1a1a" depthTest={false} depthWrite={false} />
-      </mesh>
+      {/* Red Ground Ring beneath the pin */}
+      <mesh 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        geometry={ringGeometry} 
+        material={ringMaterial} 
+        renderOrder={101}
+      />
     </group>
   );
 }
@@ -366,12 +418,13 @@ function MasterplanVisibilityManager({
     const dist = camera.position.length();
 
     // Threshold Tuning for Proper Geographic LOD:
-    if (visibleRef.current && dist > 12000) {
+    // Cull before the plot boundaries compress into a solid black mass
+    if (visibleRef.current && dist > 6000) {
       visibleRef.current = false;
       masterplanRef.current.visible = false;
       dotRef.current.visible = true;
       invalidate();
-    } else if (!visibleRef.current && dist < 9500) {
+    } else if (!visibleRef.current && dist < 4800) {
       visibleRef.current = true;
       masterplanRef.current.visible = true;
       dotRef.current.visible = false;

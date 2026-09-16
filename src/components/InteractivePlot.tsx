@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei';
+import { Text, Line } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { registerPlotPosition, registerPlotCorners, getAllPlotCorners } from '../data/plotLookup';
 import type { PlotStatus } from '../types/plot';
@@ -84,25 +84,16 @@ const borderMaterial = new THREE.LineBasicMaterial({
 const WHITE_OUTLINE_Z = 0.245;
 const LABEL_Z = 0.255;
 
-const selectionBoundaryGeomCache = new Map<string, THREE.BufferGeometry>();
 const crosshairGeomCache = new Map<string, THREE.BufferGeometry>();
 
-function getSelectionBoundaryGeom(plot: PlotSpec) {
-  const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
-  if (!selectionBoundaryGeomCache.has(key)) {
-    const points = [
-      new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
-      new THREE.Vector3(0, plot.frontage, WHITE_OUTLINE_Z),
-      new THREE.Vector3(-plot.depthT, plot.frontage, WHITE_OUTLINE_Z),
-      new THREE.Vector3(-plot.depthB, 0, WHITE_OUTLINE_Z),
-      new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
-    ];
-    const g = new THREE.BufferGeometry().setFromPoints(points);
-    const line = new THREE.Line(g, dashedMaterial);
-    line.computeLineDistances();
-    selectionBoundaryGeomCache.set(key, g);
-  }
-  return selectionBoundaryGeomCache.get(key)!;
+function getSelectionBoundaryPoints(plot: PlotSpec) {
+  return [
+    new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
+    new THREE.Vector3(0, plot.frontage, WHITE_OUTLINE_Z),
+    new THREE.Vector3(-plot.depthT, plot.frontage, WHITE_OUTLINE_Z),
+    new THREE.Vector3(-plot.depthB, 0, WHITE_OUTLINE_Z),
+    new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
+  ];
 }
 
 function getCrosshairGeom(plot: PlotSpec) {
@@ -127,17 +118,6 @@ function getCrosshairGeom(plot: PlotSpec) {
   }
   return crosshairGeomCache.get(key)!;
 }
-
-const dashedMaterial = new THREE.LineDashedMaterial({
-  color: 0xffffff,
-  dashSize: 0.6,
-  gapSize: 0.35,
-  depthTest: true,
-  depthWrite: false,
-  polygonOffset: true,
-  polygonOffsetFactor: -3,
-  polygonOffsetUnits: -3,
-});
 
 const crosshairMaterial = new THREE.LineBasicMaterial({
   color: 0xffffff,
@@ -396,9 +376,19 @@ const InteractivePlotComponent = ({
       {isSelected && (
         <group renderOrder={105}>
           {/* Main dashed border */}
-          <lineLoop
-            geometry={getSelectionBoundaryGeom(plot)}
-            material={dashedMaterial}
+          <Line
+            points={getSelectionBoundaryPoints(plot)}
+            color="white"
+            lineWidth={3.5}
+            dashed={true}
+            dashSize={0.6}
+            dashScale={1}
+            gapSize={0.35}
+            depthTest={true}
+            depthWrite={false}
+            polygonOffset={true}
+            polygonOffsetFactor={-3}
+            polygonOffsetUnits={-3}
             raycast={() => null}
           />
 
