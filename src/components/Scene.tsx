@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows, Bvh, useProgress } from '@react-three/drei';
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
 import PlotsCenterLeft from './PlotsCenterLeft';
@@ -323,141 +323,67 @@ function CameraManager({
 }
 
 function CanvasLoader() {
-  const { active, progress, item } = useProgress();
+  const { active, progress } = useProgress();
   const [mounted, setMounted] = useState(true);
-  const [smoothProgress, setSmoothProgress] = useState(20);
-  const [forceComplete, setForceComplete] = useState(false);
-
-  useEffect(() => {
-    // Safety max timer — guarantees screen unlocks seamlessly within 2.5s max
-    const maxTimer = setTimeout(() => {
-      setForceComplete(true);
-    }, 2500);
-
-    // Continuous progress ticker for smooth visual movement
-    const interval = setInterval(() => {
-      setSmoothProgress((prev) => (prev < 90 ? prev + 10 : prev));
-    }, 250);
-
-    return () => {
-      clearTimeout(maxTimer);
-      clearInterval(interval);
-    };
-  }, []);
+  const [smoothProgress, setSmoothProgress] = useState(30);
 
   useEffect(() => {
     const target = Math.min(100, Math.max(0, Math.round(progress)));
     setSmoothProgress((prev) => (target > prev ? target : prev));
   }, [progress]);
 
-  const isDone = forceComplete || (!active && progress >= 100);
+  const isDone = !active && progress >= 100;
 
   useEffect(() => {
     if (isDone) {
       setSmoothProgress(100);
       const timer = setTimeout(() => {
         setMounted(false);
-      }, 550);
+      }, 700);
       return () => clearTimeout(timer);
     }
   }, [isDone]);
 
   if (!mounted) return null;
 
-  const displayPct = isDone ? 100 : Math.min(99, Math.max(smoothProgress, 20));
+  const displayPct = isDone ? 100 : Math.min(99, Math.max(smoothProgress, 30));
 
   return (
     <div
       style={{
         position: 'absolute',
-        inset: 0,
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 9999,
-        background: 'radial-gradient(circle at center, #181c24 0%, #0d0f12 100%)',
+        background: 'rgba(18, 22, 28, 0.85)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(240, 192, 16, 0.3)',
+        borderRadius: '30px',
+        padding: '8px 18px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(240, 192, 16, 0.15)',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        gap: '10px',
         transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
         opacity: isDone ? 0 : 1,
-        pointerEvents: isDone ? 'none' : 'auto',
+        pointerEvents: 'none',
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      <div
+      <span
         style={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '36px 44px',
-          background: 'rgba(22, 26, 33, 0.85)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '24px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(240, 192, 16, 0.15)',
-          width: '440px',
-          maxWidth: '90vw',
-          textAlign: 'center',
+          width: '8px',
+          height: '8px',
+          background: isDone ? '#4caf50' : '#f0c010',
+          borderRadius: '50%',
+          boxShadow: isDone ? '0 0 10px #4caf50' : '0 0 10px #f0c010',
         }}
-      >
-        <div style={{ position: 'relative', width: '72px', height: '72px', marginBottom: '20px' }}>
-          <svg style={{ transform: 'rotate(-90deg)', width: '72px', height: '72px' }}>
-            <circle cx="36" cy="36" r="30" stroke="rgba(255,255,255,0.08)" strokeWidth="4" fill="none" />
-            <circle
-              cx="36"
-              cy="36"
-              r="30"
-              stroke="#f0c010"
-              strokeWidth="4"
-              fill="none"
-              strokeDasharray={188.4}
-              strokeDashoffset={188.4 - (188.4 * displayPct) / 100}
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.3s ease' }}
-            />
-          </svg>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '15px',
-              fontWeight: 700,
-              color: '#f0c010',
-            }}
-          >
-            {displayPct}%
-          </div>
-        </div>
-
-        <h2 style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#fff', marginBottom: '6px' }}>
-          3D Real Estate Masterplan
-        </h2>
-        <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '20px' }}>
-          {isDone ? 'Opening 3D World...' : item ? `Loading: ${item.split('/').pop()?.slice(0, 22)}...` : 'Buffering 3D Engine & Textures...'}
-        </p>
-
-        <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '10px', overflow: 'hidden', position: 'relative' }}>
-          <div
-            style={{
-              height: '100%',
-              width: `${displayPct}%`,
-              background: 'linear-gradient(90deg, #f0c010 0%, #ffd700 100%)',
-              borderRadius: '10px',
-              transition: 'width 0.3s ease',
-              boxShadow: '0 0 12px rgba(240, 192, 16, 0.8)',
-            }}
-          />
-        </div>
-
-        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#f0c010', fontWeight: 500 }}>
-          <span style={{ width: '7px', height: '7px', background: '#f0c010', borderRadius: '50%', boxShadow: '0 0 8px #f0c010' }} />
-          {isDone ? '3D Masterplan Ready' : 'Loading Real Estate Layout'}
-        </div>
-      </div>
+      />
+      <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', letterSpacing: '0.5px' }}>
+        {isDone ? '3D Masterplan Ready' : `Loading 3D Masterplan ${displayPct}%`}
+      </span>
     </div>
   );
 }
@@ -471,12 +397,20 @@ export default function Scene() {
   const [resetHeadingCount, setResetHeadingCount] = useState(0);
   const [plotStatusMap, setPlotStatusMap] = useState<PlotStatusMap>({});
 
-  // 4K Ultra-HD crisp rendering for both mobile OLEDs/Retina and laptop/desktop displays
-  const dpr = typeof window !== 'undefined' ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2) : 2;
+  // Capability-based device detection
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const userAgent = navigator.userAgent || '';
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.innerWidth < 800 || window.innerHeight < 600;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    return isMobileUA || (isTouchDevice && isSmallScreen);
+  }, []);
 
-  // Stable mobile ref — not re-derived each render
-  const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
-  const isMobile = isMobileRef.current;
+  // Optimal DPR: 4K crisp on desktop, capped at 1.5 on mobile to save 50% GPU fill-rate
+  const dpr = isMobile
+    ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 1.5)
+    : Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
 
   useEffect(() => {
     async function loadPlotStatuses() {
@@ -522,6 +456,7 @@ export default function Scene() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
+      <CanvasLoader />
       <Canvas
         frameloop="demand"
         shadows={!isMobile}
@@ -530,10 +465,10 @@ export default function Scene() {
           position: isMobile ? [0, 560, 180] : [0, 420, 140],
           fov: 45,
           near: 1,
-          far: 100000
+          far: 50000
         }}
         gl={{
-          logarithmicDepthBuffer: true,
+          logarithmicDepthBuffer: !isMobile,
           antialias: true,
           powerPreference: 'high-performance',
           alpha: false,

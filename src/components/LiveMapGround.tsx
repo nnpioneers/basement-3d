@@ -203,28 +203,41 @@ export default function LiveMapGround({
     invalidate();
   }, [initialPos[0], initialPos[1], initialPos[2], initialRot, invalidate]);
 
-  // Load local high-res satellite webp files as immediate 100% reliable ground layer
+  // Load local high-res satellite webp files with progressive priority
   useEffect(() => {
     if (mapType === 'dark') return;
 
+    let active = true;
     const loader = new THREE.TextureLoader(silentManager);
+
+    // Priority 1: Load core site satellite map immediately
     loader.load('/satellite_map.webp', (tex) => {
+      if (!active) return;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.minFilter = THREE.LinearMipmapLinearFilter;
       tex.magFilter = THREE.LinearFilter;
       tex.generateMipmaps = true;
       setBaseTexture(tex);
       invalidate();
+
+      // Priority 2: Load extended background satellite map progressively in background
+      setTimeout(() => {
+        if (!active) return;
+        loader.load('/extended_satellite_map.webp', (extTex) => {
+          if (!active) return;
+          extTex.colorSpace = THREE.SRGBColorSpace;
+          extTex.minFilter = THREE.LinearMipmapLinearFilter;
+          extTex.magFilter = THREE.LinearFilter;
+          extTex.generateMipmaps = true;
+          setExtendedTexture(extTex);
+          invalidate();
+        });
+      }, 300);
     });
 
-    loader.load('/extended_satellite_map.webp', (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.generateMipmaps = true;
-      setExtendedTexture(tex);
-      invalidate();
-    });
+    return () => {
+      active = false;
+    };
   }, [mapType, invalidate]);
 
   useEffect(() => {
