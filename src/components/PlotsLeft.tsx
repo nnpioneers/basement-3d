@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
-export default function PlotsLeft({
+function PlotsLeft({
   selectedPlotId,
   onPlotSelect,
   plotStatusMap,
@@ -34,8 +34,8 @@ export default function PlotsLeft({
   }, []);
 
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
-    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
-  }, [onPlotSelect, selectedPlotId]);
+    onPlotSelect?.(id, worldPos);
+  }, [onPlotSelect]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
@@ -53,3 +53,5 @@ export default function PlotsLeft({
     </group>
   );
 }
+
+export default memo(PlotsLeft);

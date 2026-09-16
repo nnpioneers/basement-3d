@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import * as THREE from 'three';
 import { Text, Line, Instances, Instance } from '@react-three/drei';
 
-export default function RoadNetwork() {
+function RoadNetwork() {
   const { geometry, shape } = useMemo(() => {
     const shape = new THREE.Shape();
     
@@ -393,3 +393,5 @@ export default function RoadNetwork() {
     </group>
   );
 }
+
+export default memo(RoadNetwork);

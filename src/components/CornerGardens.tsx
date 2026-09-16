@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import * as THREE from 'three';
 
 const extrudeSettings = {
@@ -45,7 +45,6 @@ function createGardenShape(x: number, y: number, w: number, h: number, chamferCo
 }
 
 function Shrub({ position }: { position: [number, number, number] }) {
-  // Use a deterministic pseudo-random scale/color based on position to avoid hydration mismatches
   const seed = Math.abs(position[0] * position[1]);
   const scale = 0.5 + (seed % 0.4);
   const isDark = (seed % 2) > 1;
@@ -60,7 +59,7 @@ function Shrub({ position }: { position: [number, number, number] }) {
   );
 }
 
-export default function CornerGardens() {
+function CornerGardens() {
   const gardens = useMemo(() => {
     return [
       { shape: createGardenShape(-22.5, 27.65, 16.5, 9.0, 'bottom-right') }, // Top-Left
@@ -97,3 +96,5 @@ export default function CornerGardens() {
     </group>
   );
 }
+
+export default memo(CornerGardens);

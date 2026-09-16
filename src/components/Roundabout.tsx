@@ -1,7 +1,9 @@
 
 
 
-export default function Roundabout() {
+import { memo } from 'react';
+
+function Roundabout() {
   const radius = 3.5;
   const grassHeight = 0.3;
   const pathWidth = 1.2;
@@ -44,3 +46,5 @@ export default function Roundabout() {
     </group>
   );
 }
+
+export default memo(Roundabout);

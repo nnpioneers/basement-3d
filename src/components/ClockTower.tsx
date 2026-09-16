@@ -1,25 +1,25 @@
-
+import { memo } from 'react';
 import * as THREE from 'three';
 
-export default function ClockTower() {
-  const stoneMaterial = new THREE.MeshStandardMaterial({
-    color: '#e5e3db', // Light premium concrete/stone
-    roughness: 0.7,
-    metalness: 0.1,
-  });
+const stoneMaterial = new THREE.MeshStandardMaterial({
+  color: '#e5e3db',
+  roughness: 0.7,
+  metalness: 0.1,
+});
 
-  const clockFaceMaterial = new THREE.MeshStandardMaterial({
-    color: '#2a2a2a', // Dark clock face
-    roughness: 0.5,
-    metalness: 0.3,
-  });
+const clockFaceMaterial = new THREE.MeshStandardMaterial({
+  color: '#2a2a2a',
+  roughness: 0.5,
+  metalness: 0.3,
+});
 
-  const clockHandMaterial = new THREE.MeshStandardMaterial({
-    color: '#d4af37', // Gold/Brass accent for hands
-    roughness: 0.3,
-    metalness: 0.8,
-  });
+const clockHandMaterial = new THREE.MeshStandardMaterial({
+  color: '#d4af37',
+  roughness: 0.3,
+  metalness: 0.8,
+});
 
+function ClockTower() {
   return (
     <group position={[0, 0, 0]} scale={[2.4, 1.6, 2.4]} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
       {/* Base Pedestal (Tier 1) */}
@@ -49,10 +49,10 @@ export default function ClockTower() {
 
       {/* Clock Faces (4 sides) */}
       {[
-        { pos: [0, 12.6, 0.76], rot: [Math.PI / 2, 0, 0] },     // Front
-        { pos: [0, 12.6, -0.76], rot: [-Math.PI / 2, 0, 0] },   // Back
-        { pos: [0.76, 12.6, 0], rot: [0, 0, -Math.PI / 2] },    // Right
-        { pos: [-0.76, 12.6, 0], rot: [0, 0, Math.PI / 2] },    // Left
+        { pos: [0, 12.6, 0.76], rot: [Math.PI / 2, 0, 0] },
+        { pos: [0, 12.6, -0.76], rot: [-Math.PI / 2, 0, 0] },
+        { pos: [0.76, 12.6, 0], rot: [0, 0, -Math.PI / 2] },
+        { pos: [-0.76, 12.6, 0], rot: [0, 0, Math.PI / 2] },
       ].map((face, index) => (
         <group key={index} position={new THREE.Vector3(...face.pos)} rotation={new THREE.Euler(...face.rot)} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
           {/* Dial */}
@@ -77,7 +77,6 @@ export default function ClockTower() {
 
       {/* Crown Pyramid */}
       <mesh position={[0, 14.8, 0]} material={stoneMaterial} matrixAutoUpdate={false} onUpdate={c => c.updateMatrix()}>
-        {/* Radius, height, radial segments */}
         <cylinderGeometry args={[0, 1.1, 2.0, 4]} />
       </mesh>
       
@@ -88,3 +87,5 @@ export default function ClockTower() {
     </group>
   );
 }
+
+export default memo(ClockTower);

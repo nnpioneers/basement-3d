@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
-export default function PlotsCenterLeft({
+function PlotsCenterLeft({
   selectedPlotId,
   onPlotSelect,
   plotStatusMap,
@@ -13,7 +13,6 @@ export default function PlotsCenterLeft({
 }) {
 
   const plotsInfo = useMemo(() => {
-    // Plots 7 to 16 are on the right side of the 12m road.
     const roadRightX = -166.5; 
     
     const plotSpecsBottom: PlotSpec[] = [
@@ -50,8 +49,8 @@ export default function PlotsCenterLeft({
   }, []);
 
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
-    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
-  }, [onPlotSelect, selectedPlotId]);
+    onPlotSelect?.(id, worldPos);
+  }, [onPlotSelect]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
@@ -69,3 +68,5 @@ export default function PlotsCenterLeft({
     </group>
   );
 }
+
+export default memo(PlotsCenterLeft);

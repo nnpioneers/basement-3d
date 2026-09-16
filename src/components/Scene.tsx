@@ -256,6 +256,8 @@ function CameraManager({
     }
   }, [controls, is3D]);
 
+  const needleRef = useRef<HTMLElement | null>(null);
+
   useFrame((_state, delta) => {
     if (!controls) return;
 
@@ -264,9 +266,11 @@ function CameraManager({
     // Fast direct DOM update for compass rotation — zero React churn
     camera.getWorldDirection(tmpForward);
     const heading = Math.atan2(tmpForward.x, tmpForward.z);
-    const needle = document.getElementById('compass-needle');
-    if (needle) {
-      needle.style.transform = `rotate(${-(heading * 180) / Math.PI}deg)`;
+    if (!needleRef.current) {
+      needleRef.current = document.getElementById('compass-needle');
+    }
+    if (needleRef.current) {
+      needleRef.current.style.transform = `rotate(${-(heading * 180) / Math.PI}deg)`;
     }
 
     // Reset heading towards North

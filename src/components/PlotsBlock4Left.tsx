@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
-export default function PlotsBlock4Left({
+function PlotsBlock4Left({
   selectedPlotId,
   onPlotSelect,
   plotStatusMap,
@@ -13,10 +13,6 @@ export default function PlotsBlock4Left({
 }) {
 
   const plotsInfo = useMemo(() => {
-    // Right edge of Block 4 Left is at -115.5
-    // Wait, Block 4 is between -142.5 and -115.5 (width 27.0).
-    // The left row has depth 12.0. So it goes from -142.5 to -130.5.
-    // The right edge is -130.5.
     const roadRightX = -130.5; 
     
     const plotSpecsBottom: PlotSpec[] = [
@@ -54,8 +50,8 @@ export default function PlotsBlock4Left({
   }, []);
 
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
-    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
-  }, [onPlotSelect, selectedPlotId]);
+    onPlotSelect?.(id, worldPos);
+  }, [onPlotSelect]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
@@ -73,3 +69,5 @@ export default function PlotsBlock4Left({
     </group>
   );
 }
+
+export default memo(PlotsBlock4Left);

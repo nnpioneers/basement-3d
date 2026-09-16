@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, memo } from 'react';
 
-export default function EntranceGate() {
+function EntranceGate() {
   const isMobileRef = useRef(typeof window !== 'undefined' && window.innerWidth < 768);
 
   // Memoized materials — created once, never recreated on re-renders
@@ -198,3 +198,5 @@ export default function EntranceGate() {
     </group>
   );
 }
+
+export default memo(EntranceGate);

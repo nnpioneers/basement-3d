@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
-export default function PlotsRightBlock4Right({
+function PlotsRightBlock4Right({
   selectedPlotId,
   onPlotSelect,
   plotStatusMap,
@@ -13,8 +13,6 @@ export default function PlotsRightBlock4Right({
 }) {
 
   const plotsInfo = useMemo(() => {
-    // Right edge of Right Block 4 Right is at 157.77
-    // They face RIGHT.
     const roadRightX = 157.77; 
     
     const plotSpecsBottom: PlotSpec[] = [
@@ -53,9 +51,10 @@ export default function PlotsRightBlock4Right({
 
     return [...bottomSpecs, ...topSpecs];
   }, []);
+
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
-    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
-  }, [onPlotSelect, selectedPlotId]);
+    onPlotSelect?.(id, worldPos);
+  }, [onPlotSelect]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
@@ -73,3 +72,5 @@ export default function PlotsRightBlock4Right({
     </group>
   );
 }
+
+export default memo(PlotsRightBlock4Right);

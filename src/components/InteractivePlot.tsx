@@ -36,6 +36,7 @@ function isPointInPolygon(pt: [number, number], poly: PlotCorners) {
   return inside;
 }
 
+// ── Global Caches for Geometries & Materials ──
 const geomCache = new Map<string, THREE.ExtrudeGeometry>();
 
 function getPlotGeom(plot: PlotSpec) {
@@ -54,8 +55,7 @@ function getPlotGeom(plot: PlotSpec) {
 }
 
 const borderGeomCache = new Map<string, THREE.BufferGeometry>();
-
-const BORDER_Z = 0.235; // Safely above the 0.22 extrusion depth
+const BORDER_Z = 0.235;
 
 function getPlotBorderGeom(plot: PlotSpec) {
   const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
@@ -70,6 +70,53 @@ function getPlotBorderGeom(plot: PlotSpec) {
     borderGeomCache.set(key, g);
   }
   return borderGeomCache.get(key)!;
+}
+
+const WHITE_OUTLINE_Z = 0.245;
+const LABEL_Z = 0.255;
+
+const selectionBoundaryGeomCache = new Map<string, THREE.BufferGeometry>();
+const crosshairGeomCache = new Map<string, THREE.BufferGeometry>();
+
+function getSelectionBoundaryGeom(plot: PlotSpec) {
+  const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
+  if (!selectionBoundaryGeomCache.has(key)) {
+    const points = [
+      new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
+      new THREE.Vector3(0, plot.frontage, WHITE_OUTLINE_Z),
+      new THREE.Vector3(-plot.depthT, plot.frontage, WHITE_OUTLINE_Z),
+      new THREE.Vector3(-plot.depthB, 0, WHITE_OUTLINE_Z),
+      new THREE.Vector3(0, 0, WHITE_OUTLINE_Z),
+    ];
+    const g = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(g, dashedMaterial);
+    line.computeLineDistances();
+    selectionBoundaryGeomCache.set(key, g);
+  }
+  return selectionBoundaryGeomCache.get(key)!;
+}
+
+function getCrosshairGeom(plot: PlotSpec) {
+  const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
+  if (!crosshairGeomCache.has(key)) {
+    const s = 0.4;
+    const corners: [number, number][] = [
+      [0, 0],
+      [0, plot.frontage],
+      [-plot.depthT, plot.frontage],
+      [-plot.depthB, 0],
+    ];
+    const crosshairPoints: THREE.Vector3[] = [];
+    corners.forEach(([cx, cy]) => {
+      crosshairPoints.push(new THREE.Vector3(cx - s, cy, WHITE_OUTLINE_Z));
+      crosshairPoints.push(new THREE.Vector3(cx + s, cy, WHITE_OUTLINE_Z));
+      crosshairPoints.push(new THREE.Vector3(cx, cy - s, WHITE_OUTLINE_Z));
+      crosshairPoints.push(new THREE.Vector3(cx, cy + s, WHITE_OUTLINE_Z));
+    });
+    const g = new THREE.BufferGeometry().setFromPoints(crosshairPoints);
+    crosshairGeomCache.set(key, g);
+  }
+  return crosshairGeomCache.get(key)!;
 }
 
 const borderMaterial = new THREE.LineBasicMaterial({
@@ -117,10 +164,54 @@ const commonTextProps = {
   raycast: () => null,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Outer Edge Cache to prevent 800+ polygon checks on every render ──
+type OuterEdges = { right: boolean; top: boolean; left: boolean; bot: boolean };
+const outerEdgeCache = new Map<number, OuterEdges>();
 
-const WHITE_OUTLINE_Z = 0.245;   // z-height for white outline line
-const LABEL_Z = 0.255;   // z-height for text labels
+function getOuterEdges(
+  plotId: number,
+  plot: PlotSpec,
+  x: number,
+  y: number,
+  dimAnchors: {
+    right: { x: number; y: number; angle: number };
+    top: { x: number; y: number; angle: number };
+    left: { x: number; y: number; angle: number };
+    bot: { x: number; y: number; angle: number };
+  }
+): OuterEdges {
+  if (outerEdgeCache.has(plotId)) {
+    return outerEdgeCache.get(plotId)!;
+  }
+
+  const checkEdge = (anchor: { x: number; y: number; angle: number }) => {
+    const wx = x + anchor.x;
+    const wy = y + anchor.y;
+    const outwardAngle = anchor.angle - Math.PI / 2;
+    const testX = wx + Math.cos(outwardAngle) * 0.5;
+    const testY = wy + Math.sin(outwardAngle) * 0.5;
+
+    const allPlots = getAllPlotCorners();
+    for (const poly of allPlots) {
+      if (isPointInPolygon([testX, testY], poly)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const result: OuterEdges = {
+    right: checkEdge(dimAnchors.right),
+    top: checkEdge(dimAnchors.top),
+    left: checkEdge(dimAnchors.left),
+    bot: checkEdge(dimAnchors.bot),
+  };
+
+  outerEdgeCache.set(plotId, result);
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const InteractivePlotComponent = ({
   plot,
@@ -137,12 +228,11 @@ const InteractivePlotComponent = ({
   onClick: (id: number, worldPos: [number, number, number]) => void;
   status?: PlotStatus;
 }) => {
-  const { geom, borderGeom, metrics, worldPos, boundaryGeom, crosshairGeom, dimAnchors, wCorners } =
+  const { geom, borderGeom, metrics, worldPos, dimAnchors, wCorners } =
     useMemo(() => {
       const g = getPlotGeom(plot);
       const bg = getPlotBorderGeom(plot);
 
-      // ── Area ──────────────────────────────────────────────────────────────
       const areaSqM = ((plot.depthB + plot.depthT) / 2) * plot.frontage;
       const areaSqFt = areaSqM * 10.7639;
 
@@ -155,12 +245,11 @@ const InteractivePlotComponent = ({
         maximumFractionDigits: 2,
       })} ft` + String.fromCharCode(178);
 
-      // ── Plot corners in local 2-D space (CCW = bottom-right → top-right → top-left → bottom-left) ──
       const corners: [number, number][] = [
-        [0, 0], // 0 bottom-right (road side)
-        [0, plot.frontage], // 1 top-right
-        [-plot.depthT, plot.frontage], // 2 top-left
-        [-plot.depthB, 0], // 3 bottom-left
+        [0, 0],
+        [0, plot.frontage],
+        [-plot.depthT, plot.frontage],
+        [-plot.depthB, 0],
       ];
 
       const wCorners: PlotCorners = [
@@ -170,13 +259,6 @@ const InteractivePlotComponent = ({
         [x + corners[3][0], y + corners[3][1]],
       ];
 
-      // ── Native White Selection Boundary (Sharp dashed line) ────────────────
-      const boundary = corners.map(([cx, cy]) => new THREE.Vector3(cx, cy, WHITE_OUTLINE_Z));
-      boundary.push(boundary[0].clone()); // close
-
-      const boundaryGeom = new THREE.BufferGeometry().setFromPoints(boundary);
-
-      // ── Dimension label anchors along exact edge midpoints ───────────────
       function getEdgeAnchor(ax: number, ay: number, bx: number, by: number) {
         const dx = bx - ax;
         const dy = by - ay;
@@ -205,24 +287,11 @@ const InteractivePlotComponent = ({
       const centerX = -(plot.depthB + plot.depthT) / 4;
       const centerY = plot.frontage / 2;
 
-      // ── Corner Crosshairs (tiny + markers) ─────────────────────────────────
-      const crosshairPoints: THREE.Vector3[] = [];
-      const s = 0.4; // crosshair half-size
-      corners.forEach(([cx, cy]) => {
-        crosshairPoints.push(new THREE.Vector3(cx - s, cy, WHITE_OUTLINE_Z));
-        crosshairPoints.push(new THREE.Vector3(cx + s, cy, WHITE_OUTLINE_Z));
-        crosshairPoints.push(new THREE.Vector3(cx, cy - s, WHITE_OUTLINE_Z));
-        crosshairPoints.push(new THREE.Vector3(cx, cy + s, WHITE_OUTLINE_Z));
-      });
-      const crosshairGeom = new THREE.BufferGeometry().setFromPoints(crosshairPoints);
-
       return {
         geom: g,
         borderGeom: bg,
         metrics: { fmtM2, fmtFt2, centerX, centerY },
         worldPos: [x + centerX, 0.5, -(y + centerY)] as [number, number, number],
-        boundaryGeom,
-        crosshairGeom,
         wCorners,
         dimAnchors: {
           right: rightAnchor,
@@ -238,7 +307,6 @@ const InteractivePlotComponent = ({
     registerPlotCorners(plot.id, wCorners);
   }, [plot.id, worldPos, wCorners]);
 
-  // ── CRITICAL: force canvas redraw when selection state changes (frameloop=demand) ──
   const { invalidate } = useThree();
   useEffect(() => {
     if (isSelected) {
@@ -249,16 +317,13 @@ const InteractivePlotComponent = ({
   const [hovered, setHovered] = useState(false);
   const isSold = status === 'sold';
 
-  // ── Colors ───────────────────────────────────────────────────────────────
   const defaultBgColor = isSold ? '#8c3a3a' : '#b89b6b';
   const hoverBgColor = isSold ? '#a04848' : '#9e8254';
   const selectedBgColor = isSold ? '#6b2828' : '#1a66cc';
   const currentColor = isSelected ? selectedBgColor : hovered ? hoverBgColor : defaultBgColor;
 
-  // ── Plot number string ────────────────────────────────────────────────────
   const plotNumberStr = plot.id.toString();
 
-  // ── Font sizes & strict vertical spacing (guarantees NO text overlap) ──────
   const H = plot.frontage;
   const avgDepth = (plot.depthB + plot.depthT) / 2;
   const minDim = Math.min(H, avgDepth);
@@ -293,29 +358,8 @@ const InteractivePlotComponent = ({
   const area1Y = numY - gap1;
   const area2Y = area1Y - gap2;
 
-  // Dynamic road-facing detection: If the point slightly outward from the edge does NOT fall inside ANY other plot, it's a road edge.
-  const checkOuterEdge = (anchor: { x: number, y: number, angle: number }) => {
-    if (!isSelected) return false;
-    const wx = x + anchor.x;
-    const wy = y + anchor.y;
-    // Outward normal is angle - PI/2
-    const outwardAngle = anchor.angle - Math.PI / 2;
-    const testX = wx + Math.cos(outwardAngle) * 0.5; // Push 0.5m outward
-    const testY = wy + Math.sin(outwardAngle) * 0.5;
-
-    const allPlots = getAllPlotCorners();
-    for (const poly of allPlots) {
-      if (isPointInPolygon([testX, testY], poly)) {
-        return false; // Touches another plot, NOT an outer/road edge
-      }
-    }
-    return true; // Not inside any plot -> road/park facing!
-  };
-
-  const rightIsOuter = isSelected && checkOuterEdge(dimAnchors.right);
-  const topIsOuter = isSelected && checkOuterEdge(dimAnchors.top);
-  const leftIsOuter = isSelected && checkOuterEdge(dimAnchors.left);
-  const botIsOuter = isSelected && checkOuterEdge(dimAnchors.bot);
+  // Cached outer edge detection
+  const outerEdges = isSelected ? getOuterEdges(plot.id, plot, x, y, dimAnchors) : { right: false, top: false, left: false, bot: false };
 
   return (
     <group position={[x, y, 0]} renderOrder={isSelected ? 100 : 0}>
@@ -339,7 +383,7 @@ const InteractivePlotComponent = ({
           document.body.style.cursor = 'auto';
         }}
       >
-        {/* Solid hardware line border — zero Z-fighting, zero shimmering */}
+        {/* Solid hardware line border */}
         <lineLoop
           geometry={borderGeom}
           material={borderMaterial}
@@ -348,27 +392,21 @@ const InteractivePlotComponent = ({
         />
       </mesh>
 
-      {/* ── Native WebGL Sharp White Dashed Line & Crosshairs ── */}
+      {/* ── Native WebGL Sharp White Dashed Line & Crosshairs (Zero per-frame JS allocations) ── */}
       {isSelected && (
         <group renderOrder={105}>
           {/* Main dashed border */}
-          <primitive
-            object={(() => {
-              const line = new THREE.Line(
-                boundaryGeom,
-                dashedMaterial
-              );
-              line.computeLineDistances();
-              return line;
-            })()}
+          <lineLoop
+            geometry={getSelectionBoundaryGeom(plot)}
+            material={dashedMaterial}
+            raycast={() => null}
           />
 
           {/* Corner crosshair markers (+) */}
-          <primitive
-            object={new THREE.LineSegments(
-              crosshairGeom,
-              crosshairMaterial
-            )}
+          <lineSegments
+            geometry={getCrosshairGeom(plot)}
+            material={crosshairMaterial}
+            raycast={() => null}
           />
         </group>
       )}
@@ -450,7 +488,7 @@ const InteractivePlotComponent = ({
           {/* Right edge (frontage) */}
           <Text
             {...commonTextProps}
-            position={[dimAnchors.right.x, dimAnchors.right.y, rightIsOuter ? 0.85 : LABEL_Z]}
+            position={[dimAnchors.right.x, dimAnchors.right.y, outerEdges.right ? 0.85 : LABEL_Z]}
             rotation={[0, 0, dimAnchors.right.angle]}
             fontSize={dimFontSize}
             color="#ffffff"
@@ -459,7 +497,7 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.15}
             outlineColor="#000000"
-            renderOrder={rightIsOuter ? 200 : 120}
+            renderOrder={outerEdges.right ? 200 : 120}
           >
             {formatDimension(dimAnchors.right.dim)}
           </Text>
@@ -467,7 +505,7 @@ const InteractivePlotComponent = ({
           {/* Top edge (depthT) */}
           <Text
             {...commonTextProps}
-            position={[dimAnchors.top.x, dimAnchors.top.y, topIsOuter ? 0.85 : LABEL_Z]}
+            position={[dimAnchors.top.x, dimAnchors.top.y, outerEdges.top ? 0.85 : LABEL_Z]}
             rotation={[0, 0, dimAnchors.top.angle]}
             fontSize={dimFontSize}
             color="#ffffff"
@@ -476,7 +514,7 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.15}
             outlineColor="#000000"
-            renderOrder={topIsOuter ? 200 : 120}
+            renderOrder={outerEdges.top ? 200 : 120}
           >
             {formatDimension(dimAnchors.top.dim)}
           </Text>
@@ -484,7 +522,7 @@ const InteractivePlotComponent = ({
           {/* Left edge (slanted back boundary) */}
           <Text
             {...commonTextProps}
-            position={[dimAnchors.left.x, dimAnchors.left.y, leftIsOuter ? 0.85 : LABEL_Z]}
+            position={[dimAnchors.left.x, dimAnchors.left.y, outerEdges.left ? 0.85 : LABEL_Z]}
             rotation={[0, 0, dimAnchors.left.angle]}
             fontSize={dimFontSize}
             color="#ffffff"
@@ -493,7 +531,7 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.15}
             outlineColor="#000000"
-            renderOrder={leftIsOuter ? 200 : 120}
+            renderOrder={outerEdges.left ? 200 : 120}
           >
             {formatDimension(dimAnchors.left.dim)}
           </Text>
@@ -501,7 +539,7 @@ const InteractivePlotComponent = ({
           {/* Bottom edge (depthB) */}
           <Text
             {...commonTextProps}
-            position={[dimAnchors.bot.x, dimAnchors.bot.y, botIsOuter ? 0.85 : LABEL_Z]}
+            position={[dimAnchors.bot.x, dimAnchors.bot.y, outerEdges.bot ? 0.85 : LABEL_Z]}
             rotation={[0, 0, dimAnchors.bot.angle]}
             fontSize={dimFontSize}
             color="#ffffff"
@@ -510,7 +548,7 @@ const InteractivePlotComponent = ({
             fontWeight="bold"
             outlineWidth={dimFontSize * 0.15}
             outlineColor="#000000"
-            renderOrder={botIsOuter ? 200 : 120}
+            renderOrder={outerEdges.bot ? 200 : 120}
           >
             {formatDimension(dimAnchors.bot.dim)}
           </Text>
@@ -524,6 +562,8 @@ export default React.memo(InteractivePlotComponent, (prevProps, nextProps) => {
   return (
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.status === nextProps.status &&
-    prevProps.plot.id === nextProps.plot.id
+    prevProps.plot.id === nextProps.plot.id &&
+    prevProps.x === nextProps.x &&
+    prevProps.y === nextProps.y
   );
 });

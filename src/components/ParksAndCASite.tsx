@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import MainPark from './park/MainPark';
 import EntrancePark from './park/EntrancePark';
 
-export default function ParksAndCASite() {
+function ParksAndCASite() {
   const { caGeom } = useMemo(() => {
     // 2. Top-Left CA Site
     const caShape = new THREE.Shape();
@@ -68,4 +68,6 @@ export default function ParksAndCASite() {
     </group>
   );
 }
+
+export default memo(ParksAndCASite);
 

@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
 
-export default function PlotsRightBlock1Left({
+function PlotsRightBlock1Left({
   selectedPlotId,
   onPlotSelect,
   plotStatusMap,
@@ -13,8 +13,6 @@ export default function PlotsRightBlock1Left({
 }) {
 
   const plotsInfo = useMemo(() => {
-    // Right edge of Right Block 1 Left is at 22.5
-    // They face LEFT.
     const roadRightX = 22.5; 
     
     const plotSpecsBottom: PlotSpec[] = [
@@ -39,7 +37,7 @@ export default function PlotsRightBlock1Left({
       return { spec, x: roadRightX, y };
     });
 
-    let currentYTop = 36.65; // Skip the 9.0 G hole
+    let currentYTop = 36.65;
     const topPlots = plotSpecsTop.map((spec) => {
       const y = currentYTop;
       currentYTop += spec.frontage;
@@ -48,9 +46,10 @@ export default function PlotsRightBlock1Left({
 
     return [...bottomPlots, ...topPlots];
   }, []);
+
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
-    onPlotSelect?.(selectedPlotId === id ? null : id, selectedPlotId === id ? null : worldPos);
-  }, [onPlotSelect, selectedPlotId]);
+    onPlotSelect?.(id, worldPos);
+  }, [onPlotSelect]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.5]}>
@@ -68,3 +67,5 @@ export default function PlotsRightBlock1Left({
     </group>
   );
 }
+
+export default memo(PlotsRightBlock1Left);
