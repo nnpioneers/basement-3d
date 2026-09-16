@@ -37,6 +37,13 @@ interface TileData {
   key: string;
 }
 
+// Reusable math objects to prevent per-frame garbage collection spikes on mobile
+const _groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const _raycaster = new THREE.Raycaster();
+const _target = new THREE.Vector3();
+const _groupMatrix = new THREE.Matrix4();
+const _inverseMatrix = new THREE.Matrix4();
+
 function DynamicTileLayer({ 
   zoom, 
   radius, 
@@ -75,30 +82,27 @@ function DynamicTileLayer({
   useFrame(() => {
     if (!active) return;
     
-    // 1. Raycast to find what the camera is looking at on the ground
-    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-    const target = new THREE.Vector3();
+    // 1. Raycast using shared objects (zero allocation)
+    _raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     
-    let intersect = raycaster.ray.intersectPlane(groundPlane, target);
+    let intersect = _raycaster.ray.intersectPlane(_groundPlane, _target);
     if (!intersect) {
       // If looking up at the sky, project directly down
-      target.copy(camera.position);
-      target.y = 0;
+      _target.copy(camera.position);
+      _target.y = 0;
     }
 
     // 2. Convert world target to local group coordinates
-    const groupMatrix = new THREE.Matrix4().makeRotationY(groupRot);
-    groupMatrix.setPosition(groupPos[0], -0.65 + groupPos[1], groupPos[2]);
-    const inverseMatrix = groupMatrix.invert();
-    target.applyMatrix4(inverseMatrix);
+    _groupMatrix.makeRotationY(groupRot);
+    _groupMatrix.setPosition(groupPos[0], -0.65 + groupPos[1], groupPos[2]);
+    _inverseMatrix.copy(_groupMatrix).invert();
+    _target.applyMatrix4(_inverseMatrix);
 
     // 3. Convert local target to Mercator
     const centerMerc = latLonToMercator(CENTER_LAT, CENTER_LON);
     const scale = Math.cos(CENTER_LAT * Math.PI / 180);
-    const mercX = (target.x / scale) + centerMerc.x;
-    const mercY = -(target.z / scale) + centerMerc.y;
+    const mercX = (_target.x / scale) + centerMerc.x;
+    const mercY = -(_target.z / scale) + centerMerc.y;
 
     // 4. Convert Mercator to tile coordinates
     const n = Math.pow(2, zoom);
@@ -240,7 +244,12 @@ function MapTile({ tile, yOffset, renderOrder = 3 }: { tile: TileData, yOffset: 
       renderOrder={renderOrder}
     >
       <planeGeometry args={[tile.width, tile.height]} />
-      <meshBasicMaterial map={texture} depthWrite={false} transparent={true} depthTest={true} />
+      <meshBasicMaterial 
+        map={texture} 
+        depthWrite={false} 
+        transparent={false} 
+        depthTest={true} 
+      />
     </mesh>
   );
 }
@@ -363,52 +372,50 @@ export default function LiveMapGround({
         </Html>
       )}
 
-      {/* 1. Ground Base Warm Soil Color Plane (Massive backstop to prevent void) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null} renderOrder={-1}>
-        <planeGeometry args={[10000000, 10000000]} />
-        <meshBasicMaterial color="#3f4537" depthWrite={false} />
-      </mesh>
-
       {/* --- AUTHORITATIVE LIVE TILE LAYERS --- */}
       
-      {/* 9. Live Zoom 3 World layer - ALWAYS ON for ultimate backstop and world map */}
-      <DynamicTileLayer zoom={3} radius={4} yOffset={-0.9} renderOrder={-1} groupPos={pos} groupRot={rot} active={true} />
+      {/* 9. Live Zoom 3 World layer */}
+      <DynamicTileLayer zoom={3} radius={4} yOffset={-0.9} renderOrder={1} groupPos={pos} groupRot={rot} active={
+        tileBand === 'HEMISPHERE' || tileBand === 'CONTINENTAL'
+      } />
 
       {/* 8. Live Zoom 5 */}
-      <DynamicTileLayer zoom={5} radius={3} yOffset={-0.8} renderOrder={0} groupPos={pos} groupRot={rot} active={true} />
+      <DynamicTileLayer zoom={5} radius={3} yOffset={-0.8} renderOrder={2} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CONTINENTAL' || tileBand === 'REGIONAL' || tileBand === 'HEMISPHERE'
+      } />
 
       {/* 7. Live Zoom 7 Continental layer */}
-      <DynamicTileLayer zoom={7} radius={3} yOffset={-0.7} renderOrder={1} groupPos={pos} groupRot={rot} active={
-        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL' || tileBand === 'CONTINENTAL' || tileBand === 'HEMISPHERE'
+      <DynamicTileLayer zoom={7} radius={3} yOffset={-0.7} renderOrder={3} groupPos={pos} groupRot={rot} active={
+        tileBand === 'REGIONAL' || tileBand === 'VERY_FAR' || tileBand === 'CONTINENTAL'
       } />
 
       {/* 6. Live Zoom 9 Regional layer */}
-      <DynamicTileLayer zoom={9} radius={2} yOffset={-0.6} renderOrder={2} groupPos={pos} groupRot={rot} active={
-        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL' || tileBand === 'CONTINENTAL'
+      <DynamicTileLayer zoom={9} radius={3} yOffset={-0.6} renderOrder={4} groupPos={pos} groupRot={rot} active={
+        tileBand === 'VERY_FAR' || tileBand === 'FAR' || tileBand === 'REGIONAL'
       } />
 
       {/* 5. Live Zoom 11 Sub-Regional layer */}
-      <DynamicTileLayer zoom={11} radius={2} yOffset={-0.5} renderOrder={3} groupPos={pos} groupRot={rot} active={
-        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL'
+      <DynamicTileLayer zoom={11} radius={3} yOffset={-0.5} renderOrder={5} groupPos={pos} groupRot={rot} active={
+        tileBand === 'FAR' || tileBand === 'MEDIUM' || tileBand === 'VERY_FAR'
       } />
 
       {/* 4. Live Zoom 13 Macro layer */}
-      <DynamicTileLayer zoom={13} radius={2} yOffset={-0.4} renderOrder={4} groupPos={pos} groupRot={rot} active={
-        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR'
+      <DynamicTileLayer zoom={13} radius={3} yOffset={-0.4} renderOrder={6} groupPos={pos} groupRot={rot} active={
+        tileBand === 'MEDIUM' || tileBand === 'FAR'
       } />
 
       {/* 3. Live Zoom 15 Local layer */}
-      <DynamicTileLayer zoom={15} radius={3} yOffset={-0.3} renderOrder={5} groupPos={pos} groupRot={rot} active={
-        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR'
-      } />
-
-      {/* 2. Live Zoom 17 Detail layer */}
-      <DynamicTileLayer zoom={17} radius={3} yOffset={-0.2} renderOrder={6} groupPos={pos} groupRot={rot} active={
+      <DynamicTileLayer zoom={15} radius={4} yOffset={-0.3} renderOrder={7} groupPos={pos} groupRot={rot} active={
         tileBand === 'CLOSE' || tileBand === 'MEDIUM'
       } />
 
+      {/* 2. Live Zoom 17 Detail layer */}
+      <DynamicTileLayer zoom={17} radius={3} yOffset={-0.2} renderOrder={8} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE'
+      } />
+
       {/* 1. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
-      <DynamicTileLayer zoom={19} radius={2} yOffset={-0.1} renderOrder={7} groupPos={pos} groupRot={rot} active={
+      <DynamicTileLayer zoom={19} radius={3} yOffset={-0.1} renderOrder={9} groupPos={pos} groupRot={rot} active={
         tileBand === 'CLOSE'
       } />
     </group>

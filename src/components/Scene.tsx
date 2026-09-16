@@ -518,8 +518,12 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
 
   // Memoized stable callbacks — prevents all 18 block components from re-rendering
   const handlePlotSelect = useCallback((id: number | null, pos: [number, number, number] | null) => {
-    setSelectedPlotId(id);
-    setSelectedPlotPos(pos);
+    setSelectedPlotId((prevId) => {
+      const isDeselecting = prevId === id;
+      // We can safely update the pos state synchronously here during the same batch
+      setSelectedPlotPos(isDeselecting ? null : pos);
+      return isDeselecting ? null : id;
+    });
   }, []);
 
   const handleSearchPlot = useCallback((plotNumber: number) => {
