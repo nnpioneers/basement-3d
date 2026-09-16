@@ -483,7 +483,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           position: isMobile ? [0, 560, 180] : [0, 420, 140],
           fov: 45,
           near: 1,
-          far: 50000
+          far: 100000000
         }}
         gl={{
           logarithmicDepthBuffer: !isMobile,
@@ -565,7 +565,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           minPolarAngle={0}
           enableRotate={is3D}
           minDistance={15}
-          maxDistance={50000}
+          maxDistance={30000000}
           enableDamping={true}
           dampingFactor={0.08}
         />

@@ -37,50 +37,120 @@ interface TileData {
   key: string;
 }
 
-function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRadius: number) {
-  const n = Math.pow(2, zoom);
-  const centerTx = (centerLon + 180) / 360 * n;
-  const latRad = centerLat * Math.PI / 180;
-  const centerTy = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+function DynamicTileLayer({ 
+  zoom, 
+  radius, 
+  yOffset, 
+  renderOrder, 
+  groupPos, 
+  groupRot, 
+  active 
+}: { 
+  zoom: number, 
+  radius: number, 
+  yOffset: number, 
+  renderOrder: number, 
+  groupPos: [number, number, number], 
+  groupRot: number, 
+  active: boolean 
+}) {
+  const { camera } = useThree();
+  const [centerTx, setCenterTx] = useState<number | null>(null);
+  const [centerTy, setCenterTy] = useState<number | null>(null);
 
-  const cx = Math.floor(centerTx);
-  const cy = Math.floor(centerTy);
-
-  const centerMerc = latLonToMercator(centerLat, centerLon);
-  const scale = Math.cos(centerLat * Math.PI / 180);
-
-  const tiles: TileData[] = [];
-  for (let x = cx - gridRadius; x <= cx + gridRadius; x++) {
-    for (let y = cy - gridRadius; y <= cy + gridRadius; y++) {
-      const bounds = tileToMercatorBounds(x, y, zoom);
-
-      const pLeft = (bounds.left - centerMerc.x) * scale;
-      const pRight = (bounds.right - centerMerc.x) * scale;
-      const pTop = -(bounds.top - centerMerc.y) * scale;
-      const pBottom = -(bounds.bottom - centerMerc.y) * scale;
-
-      const width = Math.abs(pRight - pLeft);
-      const height = Math.abs(pBottom - pTop);
-      const posX = (pLeft + pRight) / 2;
-      const posZ = (pTop + pBottom) / 2;
-
-      const cdnSub = Math.abs(x + y) % 4;
-      // Direct Google Maps Satellite CDN URL (CORS-enabled globally)
-      const primaryUrl = `https://mt${cdnSub}.google.com/vt/lyrs=y&x=${x}&y=${y}&z=${zoom}`;
-      const fallbackUrl = `/api/tile?x=${x}&y=${y}&z=${zoom}`;
-
-      tiles.push({
-        url: primaryUrl,
-        fallbackUrl,
-        width,
-        height,
-        posX,
-        posZ,
-        key: `${zoom}-${x}-${y}`
-      });
+  useFrame(() => {
+    if (!active) return;
+    
+    // 1. Raycast to find what the camera is looking at on the ground
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const target = new THREE.Vector3();
+    
+    let intersect = raycaster.ray.intersectPlane(groundPlane, target);
+    if (!intersect) {
+      // If looking up at the sky, project directly down
+      target.copy(camera.position);
+      target.y = 0;
     }
-  }
-  return tiles;
+
+    // 2. Convert world target to local group coordinates
+    const groupMatrix = new THREE.Matrix4().makeRotationY(groupRot);
+    groupMatrix.setPosition(groupPos[0], -0.65 + groupPos[1], groupPos[2]);
+    const inverseMatrix = groupMatrix.invert();
+    target.applyMatrix4(inverseMatrix);
+
+    // 3. Convert local target to Mercator
+    const centerMerc = latLonToMercator(CENTER_LAT, CENTER_LON);
+    const scale = Math.cos(CENTER_LAT * Math.PI / 180);
+    const mercX = (target.x / scale) + centerMerc.x;
+    const mercY = -(target.z / scale) + centerMerc.y;
+
+    // 4. Convert Mercator to tile coordinates
+    const n = Math.pow(2, zoom);
+    const tx = Math.floor((mercX + Math.PI * R) / (2 * Math.PI * R) * n);
+    const ty = Math.floor((Math.PI * R - mercY) / (2 * Math.PI * R) * n);
+
+    if (tx !== centerTx || ty !== centerTy) {
+      setCenterTx(tx);
+      setCenterTy(ty);
+    }
+  });
+
+  const tiles = useMemo(() => {
+    if (centerTx === null || centerTy === null) return [];
+    
+    const newTiles: TileData[] = [];
+    const centerMerc = latLonToMercator(CENTER_LAT, CENTER_LON);
+    const scale = Math.cos(CENTER_LAT * Math.PI / 180);
+    const n = Math.pow(2, zoom);
+
+    for (let x = centerTx - radius; x <= centerTx + radius; x++) {
+      for (let y = centerTy - radius; y <= centerTy + radius; y++) {
+        // Clamp Y to valid tile range (poles)
+        if (y < 0 || y >= n) continue;
+
+        // Wrap X for infinite horizontal panning (Globe effect)
+        let wrappedX = x % n;
+        if (wrappedX < 0) wrappedX += n;
+
+        const bounds = tileToMercatorBounds(x, y, zoom);
+
+        const pLeft = (bounds.left - centerMerc.x) * scale;
+        const pRight = (bounds.right - centerMerc.x) * scale;
+        const pTop = -(bounds.top - centerMerc.y) * scale;
+        const pBottom = -(bounds.bottom - centerMerc.y) * scale;
+
+        const width = Math.abs(pRight - pLeft);
+        const height = Math.abs(pBottom - pTop);
+        const posX = (pLeft + pRight) / 2;
+        const posZ = (pTop + pBottom) / 2;
+
+        const cdnSub = Math.abs(wrappedX + y) % 4;
+        const primaryUrl = `https://mt${cdnSub}.google.com/vt/lyrs=y&x=${wrappedX}&y=${y}&z=${zoom}`;
+        const fallbackUrl = `/api/tile?x=${wrappedX}&y=${y}&z=${zoom}`;
+
+        newTiles.push({
+          url: primaryUrl,
+          fallbackUrl,
+          width,
+          height,
+          posX,
+          posZ,
+          key: `${zoom}-${x}-${y}` // Use unwrapped x to keep distinct physical DOM elements
+        });
+      }
+    }
+    return newTiles;
+  }, [centerTx, centerTy, zoom, radius]);
+
+  if (!active && tiles.length === 0) return null;
+
+  return (
+    <group>
+      {tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={yOffset} renderOrder={renderOrder} />)}
+    </group>
+  );
 }
 
 // Reusable texture loader cache to avoid duplicate loads
@@ -176,25 +246,24 @@ export default function LiveMapGround({
   const [pos, setPos] = useState(initialPos);
   const [rot, setRot] = useState(initialRot);
   const [showDebug, setShowDebug] = useState(false);
-  const [baseTexture, setBaseTexture] = useState<THREE.Texture | null>(null);
-  const [extendedTexture, setExtendedTexture] = useState<THREE.Texture | null>(null);
 
-  // Dynamic Camera Distance Tile Culling with Hysteresis
-  const [tileBand, setTileBand] = useState<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
-  const currentBandRef = useRef<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
+  // Expanded dynamic camera distance tile culling to support massive world view
+  type TileBand = 'CLOSE' | 'MEDIUM' | 'FAR' | 'VERY_FAR' | 'REGIONAL' | 'CONTINENTAL' | 'HEMISPHERE' | 'WORLD';
+  const [tileBand, setTileBand] = useState<TileBand>('CLOSE');
+  const currentBandRef = useRef<TileBand>('CLOSE');
 
   useFrame(({ camera }) => {
     const dist = camera.position.length();
     let newBand = currentBandRef.current;
 
-    if (currentBandRef.current === 'CLOSE') {
-      if (dist > 750) newBand = 'MEDIUM';
-    } else if (currentBandRef.current === 'MEDIUM') {
-      if (dist < 500) newBand = 'CLOSE';
-      else if (dist > 1500) newBand = 'FAR';
-    } else if (currentBandRef.current === 'FAR') {
-      if (dist < 1100) newBand = 'MEDIUM';
-    }
+    if (dist < 1500) newBand = 'CLOSE';
+    else if (dist > 2000 && dist < 4000) newBand = 'MEDIUM';
+    else if (dist > 5000 && dist < 15000) newBand = 'FAR';
+    else if (dist > 20000 && dist < 60000) newBand = 'VERY_FAR';
+    else if (dist > 80000 && dist < 250000) newBand = 'REGIONAL';
+    else if (dist > 300000 && dist < 1000000) newBand = 'CONTINENTAL';
+    else if (dist > 1500000 && dist < 4000000) newBand = 'HEMISPHERE';
+    else if (dist > 5000000) newBand = 'WORLD';
 
     if (newBand !== currentBandRef.current) {
       currentBandRef.current = newBand;
@@ -208,43 +277,6 @@ export default function LiveMapGround({
     setRot(initialRot);
     invalidate();
   }, [initialPos[0], initialPos[1], initialPos[2], initialRot, invalidate]);
-
-  // Load local high-res satellite webp files with progressive priority
-  useEffect(() => {
-    if (mapType === 'dark') return;
-
-    let active = true;
-    const loader = new THREE.TextureLoader(silentManager);
-
-    // Priority 1: Load core site satellite map immediately
-    loader.load('/satellite_map.webp', (tex) => {
-      if (!active) return;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.generateMipmaps = true;
-      setBaseTexture(tex);
-      invalidate();
-
-      // Priority 2: Load extended background satellite map progressively in background
-      setTimeout(() => {
-        if (!active) return;
-        loader.load('/extended_satellite_map.webp', (extTex) => {
-          if (!active) return;
-          extTex.colorSpace = THREE.SRGBColorSpace;
-          extTex.minFilter = THREE.LinearMipmapLinearFilter;
-          extTex.magFilter = THREE.LinearFilter;
-          extTex.generateMipmaps = true;
-          setExtendedTexture(extTex);
-          invalidate();
-        });
-      }, 300);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [mapType, invalidate]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -288,20 +320,6 @@ export default function LiveMapGround({
     );
   }
 
-  // Multi-scale live tile hierarchy with optimized tile radii
-  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 2), []);
-  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 3), []);
-  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 3), []);
-  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 3), []);
-
-  // Photo 1 Original Calibrated Ground Scale (1.040)
-  const scaleX = 1.040;
-  const scaleY = 1.040;
-  const groundWidth = 1254.2 * scaleX;
-  const groundHeight = 1254.2 * scaleY;
-  const extendedGroundWidth = (153 / 17) * 1254.2 * scaleX;
-  const extendedGroundHeight = (153 / 17) * 1254.2 * scaleY;
-
   return (
     <group
       position={[pos[0], -0.65 + pos[1], pos[2]]}
@@ -331,55 +349,54 @@ export default function LiveMapGround({
         </Html>
       )}
 
-      {/* 1. Ground Base Warm Soil Color Plane (60km radius natural earth color underneath) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null} renderOrder={0}>
-        <planeGeometry args={[60000, 60000]} />
+      {/* 1. Ground Base Warm Soil Color Plane (Massive backstop to prevent void) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null} renderOrder={-1}>
+        <planeGeometry args={[10000000, 10000000]} />
         <meshBasicMaterial color="#3f4537" depthWrite={false} />
       </mesh>
 
-      {/* 2. Extended ~11.2km Local Satellite Map Plane (Instant guaranteed local imagery) */}
-      {extendedTexture && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null} renderOrder={1}>
-          <planeGeometry args={[extendedGroundWidth, extendedGroundHeight]} />
-          <meshBasicMaterial map={extendedTexture} depthWrite={false} />
-        </mesh>
-      )}
+      {/* --- AUTHORITATIVE LIVE TILE LAYERS --- */}
+      
+      {/* 9. Live Zoom 3 World layer - ALWAYS ON for ultimate backstop and world map */}
+      <DynamicTileLayer zoom={3} radius={4} yOffset={-0.9} renderOrder={-1} groupPos={pos} groupRot={rot} active={true} />
 
-      {/* 3. Site Core High-Resolution Aerial Satellite Map Plane */}
-      {baseTexture && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.9, 0]} receiveShadow raycast={() => null} renderOrder={2}>
-          <planeGeometry args={[groundWidth, groundHeight]} />
-          <meshBasicMaterial map={baseTexture} depthWrite={false} />
-        </mesh>
-      )}
+      {/* 8. Live Zoom 5 */}
+      <DynamicTileLayer zoom={5} radius={3} yOffset={-0.8} renderOrder={0} groupPos={pos} groupRot={rot} active={true} />
 
-      {/* 4. Live Zoom 13 Macro layer (~54km wide coverage) */}
-      {(tileBand === 'FAR' || tileBand === 'MEDIUM') && (
-        <group>
-          {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} renderOrder={3} />)}
-        </group>
-      )}
+      {/* 7. Live Zoom 7 Continental layer */}
+      <DynamicTileLayer zoom={7} radius={3} yOffset={-0.7} renderOrder={1} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL' || tileBand === 'CONTINENTAL' || tileBand === 'HEMISPHERE'
+      } />
 
-      {/* 5. Live Zoom 15 Regional layer (~13.5km wide coverage) */}
-      {(tileBand === 'FAR' || tileBand === 'MEDIUM') && (
-        <group>
-          {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} renderOrder={4} />)}
-        </group>
-      )}
+      {/* 6. Live Zoom 9 Regional layer */}
+      <DynamicTileLayer zoom={9} radius={2} yOffset={-0.6} renderOrder={2} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL' || tileBand === 'CONTINENTAL'
+      } />
 
-      {/* 6. Live Zoom 17 Local layer (~3.4km wide coverage) */}
-      {(tileBand === 'MEDIUM' || tileBand === 'CLOSE') && (
-        <group>
-          {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} renderOrder={5} />)}
-        </group>
-      )}
+      {/* 5. Live Zoom 11 Sub-Regional layer */}
+      <DynamicTileLayer zoom={11} radius={2} yOffset={-0.5} renderOrder={3} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR' || tileBand === 'REGIONAL'
+      } />
 
-      {/* 7. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
-      {(tileBand === 'CLOSE' || tileBand === 'MEDIUM') && (
-        <group>
-          {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} renderOrder={6} />)}
-        </group>
-      )}
+      {/* 4. Live Zoom 13 Macro layer */}
+      <DynamicTileLayer zoom={13} radius={2} yOffset={-0.4} renderOrder={4} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR' || tileBand === 'VERY_FAR'
+      } />
+
+      {/* 3. Live Zoom 15 Local layer */}
+      <DynamicTileLayer zoom={15} radius={3} yOffset={-0.3} renderOrder={5} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM' || tileBand === 'FAR'
+      } />
+
+      {/* 2. Live Zoom 17 Detail layer */}
+      <DynamicTileLayer zoom={17} radius={3} yOffset={-0.2} renderOrder={6} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE' || tileBand === 'MEDIUM'
+      } />
+
+      {/* 1. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
+      <DynamicTileLayer zoom={19} radius={2} yOffset={-0.1} renderOrder={7} groupPos={pos} groupRot={rot} active={
+        tileBand === 'CLOSE'
+      } />
     </group>
   );
 }
