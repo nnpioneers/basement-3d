@@ -135,9 +135,6 @@ function getPlotMaterial(color: string) {
       color,
       roughness: 1.0,
       metalness: 0.0,
-      polygonOffset: true,
-      polygonOffsetFactor: 1,
-      polygonOffsetUnits: 1,
     });
   }
   return matCache[color];
