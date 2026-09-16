@@ -165,8 +165,8 @@ interface LiveMapGroundProps {
 
 export default function LiveMapGround({
   mapType = 'satellite',
-  rotationOffset: initialRot = 0.0595,
-  positionOffset: initialPos = [-142.0, 0, 14.0],
+  rotationOffset: initialRot = 0.0600,
+  positionOffset: initialPos = [-118.0, 0, 10.0],
 }: LiveMapGroundProps) {
   const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
@@ -247,9 +247,9 @@ export default function LiveMapGround({
   const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []);
   const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []);
 
-  // Optimal ground scaling (1.062) matching entrance gate road, CA Site bend, and East/South walls 100%
-  const scaleX = 1.062;
-  const scaleY = 1.062;
+  // Perfectly proportioned ground scaling (1.115) to fit masterplan layout inside physical compound walls
+  const scaleX = 1.115;
+  const scaleY = 1.115;
   const groundWidth = 1254.2 * scaleX;
   const groundHeight = 1254.2 * scaleY;
   const extendedGroundWidth = (153 / 17) * 1254.2 * scaleX;
