@@ -165,8 +165,8 @@ interface LiveMapGroundProps {
 
 export default function LiveMapGround({
   mapType = 'satellite',
-  rotationOffset: initialRot = 0.0600,
-  positionOffset: initialPos = [-118.0, 0, 10.0],
+  rotationOffset: initialRot = 0.0800,
+  positionOffset: initialPos = [-50.0, 0, 20.0],
 }: LiveMapGroundProps) {
   const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
@@ -174,6 +174,13 @@ export default function LiveMapGround({
   const [showDebug, setShowDebug] = useState(false);
   const [baseTexture, setBaseTexture] = useState<THREE.Texture | null>(null);
   const [extendedTexture, setExtendedTexture] = useState<THREE.Texture | null>(null);
+
+  // Sync initialPos and initialRot whenever code props change (enables instant live hot reload)
+  useEffect(() => {
+    setPos(initialPos);
+    setRot(initialRot);
+    invalidate();
+  }, [initialPos[0], initialPos[1], initialPos[2], initialRot, invalidate]);
 
   // Load local high-res satellite webp files as immediate 100% reliable ground layer
   useEffect(() => {
