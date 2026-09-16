@@ -165,8 +165,8 @@ interface LiveMapGroundProps {
 
 export default function LiveMapGround({
   mapType = 'satellite',
-  rotationOffset: initialRot = 0.0610,
-  positionOffset: initialPos = [-128.5, 0, 5.0],
+  rotationOffset: initialRot = 0.06150,
+  positionOffset: initialPos = [-120.0, 0, 10.0],
 }: LiveMapGroundProps) {
   const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
@@ -247,8 +247,9 @@ export default function LiveMapGround({
   const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []);
   const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []);
 
-  const scaleX = 1.040;
-  const scaleY = 1.040;
+  // Exact mathematically calibrated ground scaling (1.088 = 1365px / 1254.2m)
+  const scaleX = 1.088;
+  const scaleY = 1.088;
   const groundWidth = 1254.2 * scaleX;
   const groundHeight = 1254.2 * scaleY;
   const extendedGroundWidth = (153 / 17) * 1254.2 * scaleX;
