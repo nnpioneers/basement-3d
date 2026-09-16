@@ -170,7 +170,6 @@ const outerEdgeCache = new Map<number, OuterEdges>();
 
 function getOuterEdges(
   plotId: number,
-  plot: PlotSpec,
   x: number,
   y: number,
   dimAnchors: {
@@ -359,7 +358,7 @@ const InteractivePlotComponent = ({
   const area2Y = area1Y - gap2;
 
   // Cached outer edge detection
-  const outerEdges = isSelected ? getOuterEdges(plot.id, plot, x, y, dimAnchors) : { right: false, top: false, left: false, bot: false };
+  const outerEdges = isSelected ? getOuterEdges(plot.id, x, y, dimAnchors) : { right: false, top: false, left: false, bot: false };
 
   return (
     <group position={[x, y, 0]} renderOrder={isSelected ? 100 : 0}>
