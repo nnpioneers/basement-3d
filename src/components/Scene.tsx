@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, ContactShadows, Bvh, useProgress } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Bvh } from '@react-three/drei';
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
@@ -322,71 +322,7 @@ function CameraManager({
   return null;
 }
 
-function CanvasLoader() {
-  const { active, progress } = useProgress();
-  const [mounted, setMounted] = useState(true);
-  const [smoothProgress, setSmoothProgress] = useState(30);
 
-  useEffect(() => {
-    const target = Math.min(100, Math.max(0, Math.round(progress)));
-    setSmoothProgress((prev) => (target > prev ? target : prev));
-  }, [progress]);
-
-  const isDone = !active && progress >= 100;
-
-  useEffect(() => {
-    if (isDone) {
-      setSmoothProgress(100);
-      const timer = setTimeout(() => {
-        setMounted(false);
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [isDone]);
-
-  if (!mounted) return null;
-
-  const displayPct = isDone ? 100 : Math.min(99, Math.max(smoothProgress, 30));
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        background: 'rgba(18, 22, 28, 0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(240, 192, 16, 0.3)',
-        borderRadius: '30px',
-        padding: '8px 18px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(240, 192, 16, 0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        opacity: isDone ? 0 : 1,
-        pointerEvents: 'none',
-        fontFamily: "'Inter', system-ui, sans-serif",
-      }}
-    >
-      <span
-        style={{
-          width: '8px',
-          height: '8px',
-          background: isDone ? '#4caf50' : '#f0c010',
-          borderRadius: '50%',
-          boxShadow: isDone ? '0 0 10px #4caf50' : '0 0 10px #f0c010',
-        }}
-      />
-      <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', letterSpacing: '0.5px' }}>
-        {isDone ? '3D Masterplan Ready' : `Loading 3D Masterplan ${displayPct}%`}
-      </span>
-    </div>
-  );
-}
 
 export default function Scene() {
   const [is3D, setIs3D] = useState(true);
@@ -456,7 +392,6 @@ export default function Scene() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#121418', position: 'relative', overflow: 'hidden' }}>
-      <CanvasLoader />
       <Canvas
         frameloop="demand"
         shadows={!isMobile}
@@ -556,9 +491,6 @@ export default function Scene() {
         </Bvh>
         </Suspense>
       </Canvas>
-
-      {/* 3D Progress Loader Overlay */}
-      <CanvasLoader />
 
       {/* Floating HUD Interface */}
       <ProjectHUD

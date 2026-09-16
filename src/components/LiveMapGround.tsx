@@ -88,8 +88,8 @@ const textureCache = new Map<string, THREE.Texture>();
 const silentManager = new THREE.LoadingManager();
 silentManager.onError = () => { };
 
-// Individual Tile Component that loads its texture asynchronously with CDN fallback and R3F invalidate()
-function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
+// Individual Tile Component with smooth mipmapping, zero Z-fighting, and renderOrder sorting
+function MapTile({ tile, yOffset, renderOrder = 3 }: { tile: TileData, yOffset: number, renderOrder?: number }) {
   const { invalidate } = useThree();
   const [texture, setTexture] = useState<THREE.Texture | null>(() => textureCache.get(tile.url) || null);
 
@@ -108,9 +108,9 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
       (tex) => {
         if (!active) return;
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.minFilter = THREE.LinearFilter;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
         tex.magFilter = THREE.LinearFilter;
-        tex.generateMipmaps = false;
+        tex.generateMipmaps = true;
         textureCache.set(tile.url, tex);
         setTexture(tex);
         invalidate();
@@ -126,9 +126,9 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
             (fbTex) => {
               if (!active) return;
               fbTex.colorSpace = THREE.SRGBColorSpace;
-              fbTex.minFilter = THREE.LinearFilter;
+              fbTex.minFilter = THREE.LinearMipmapLinearFilter;
               fbTex.magFilter = THREE.LinearFilter;
-              fbTex.generateMipmaps = false;
+              fbTex.generateMipmaps = true;
               textureCache.set(tile.url, fbTex);
               setTexture(fbTex);
               invalidate();
@@ -145,14 +145,18 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
     };
   }, [tile.url, tile.fallbackUrl, invalidate]);
 
-  // DO NOT RENDER ANYTHING IF TEXTURE IS NOT LOADED YET!
-  // This allows baseTexture and extendedTexture to show through cleanly without black rectangular blocks!
   if (!texture) return null;
 
   return (
-    <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+    <mesh
+      position={[tile.posX, yOffset, tile.posZ]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      receiveShadow
+      raycast={() => null}
+      renderOrder={renderOrder}
+    >
       <planeGeometry args={[tile.width, tile.height]} />
-      <meshBasicMaterial map={texture} depthWrite={true} />
+      <meshBasicMaterial map={texture} depthWrite={false} transparent={true} depthTest={true} />
     </mesh>
   );
 }
@@ -175,19 +179,21 @@ export default function LiveMapGround({
   const [baseTexture, setBaseTexture] = useState<THREE.Texture | null>(null);
   const [extendedTexture, setExtendedTexture] = useState<THREE.Texture | null>(null);
 
-  // Dynamic Camera Distance Tile Culling
+  // Dynamic Camera Distance Tile Culling with Hysteresis
   const [tileBand, setTileBand] = useState<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
   const currentBandRef = useRef<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
 
   useFrame(({ camera }) => {
     const dist = camera.position.length();
-    let newBand: 'CLOSE' | 'MEDIUM' | 'FAR' = 'CLOSE';
-    if (dist > 1200) {
-      newBand = 'FAR';
-    } else if (dist > 550) {
-      newBand = 'MEDIUM';
-    } else {
-      newBand = 'CLOSE';
+    let newBand = currentBandRef.current;
+
+    if (currentBandRef.current === 'CLOSE') {
+      if (dist > 750) newBand = 'MEDIUM';
+    } else if (currentBandRef.current === 'MEDIUM') {
+      if (dist < 500) newBand = 'CLOSE';
+      else if (dist > 1500) newBand = 'FAR';
+    } else if (currentBandRef.current === 'FAR') {
+      if (dist < 1100) newBand = 'MEDIUM';
     }
 
     if (newBand !== currentBandRef.current) {
@@ -196,7 +202,7 @@ export default function LiveMapGround({
     }
   });
 
-  // Sync initialPos and initialRot whenever code props change (enables instant live hot reload)
+  // Sync initialPos and initialRot whenever code props change
   useEffect(() => {
     setPos(initialPos);
     setRot(initialRot);
@@ -326,52 +332,52 @@ export default function LiveMapGround({
       )}
 
       {/* 1. Ground Base Warm Soil Color Plane (60km radius natural earth color underneath) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null} renderOrder={0}>
         <planeGeometry args={[60000, 60000]} />
         <meshBasicMaterial color="#3f4537" depthWrite={false} />
       </mesh>
 
       {/* 2. Extended ~11.2km Local Satellite Map Plane (Instant guaranteed local imagery) */}
       {extendedTexture && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null} renderOrder={1}>
           <planeGeometry args={[extendedGroundWidth, extendedGroundHeight]} />
-          <meshBasicMaterial map={extendedTexture} depthWrite={true} />
+          <meshBasicMaterial map={extendedTexture} depthWrite={false} />
         </mesh>
       )}
 
       {/* 3. Site Core High-Resolution Aerial Satellite Map Plane */}
       {baseTexture && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.9, 0]} receiveShadow raycast={() => null}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.9, 0]} receiveShadow raycast={() => null} renderOrder={2}>
           <planeGeometry args={[groundWidth, groundHeight]} />
-          <meshBasicMaterial map={baseTexture} depthWrite={true} />
+          <meshBasicMaterial map={baseTexture} depthWrite={false} />
         </mesh>
       )}
 
       {/* 4. Live Zoom 13 Macro layer (~54km wide coverage) */}
-      {tileBand === 'FAR' && (
+      {(tileBand === 'FAR' || tileBand === 'MEDIUM') && (
         <group>
-          {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} />)}
+          {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} renderOrder={3} />)}
         </group>
       )}
 
       {/* 5. Live Zoom 15 Regional layer (~13.5km wide coverage) */}
       {(tileBand === 'FAR' || tileBand === 'MEDIUM') && (
         <group>
-          {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} />)}
+          {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} renderOrder={4} />)}
         </group>
       )}
 
       {/* 6. Live Zoom 17 Local layer (~3.4km wide coverage) */}
       {(tileBand === 'MEDIUM' || tileBand === 'CLOSE') && (
         <group>
-          {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} />)}
+          {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} renderOrder={5} />)}
         </group>
       )}
 
       {/* 7. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
-      {tileBand === 'CLOSE' && (
+      {(tileBand === 'CLOSE' || tileBand === 'MEDIUM') && (
         <group>
-          {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} />)}
+          {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} renderOrder={6} />)}
         </group>
       )}
     </group>
