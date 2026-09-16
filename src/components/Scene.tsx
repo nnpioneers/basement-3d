@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, Environment, ContactShadows, Bvh, useProgress } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Bvh, useProgress } from '@react-three/drei';
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
@@ -28,6 +28,7 @@ import ParksAndCASite from './ParksAndCASite';
 import EntranceGate from './EntranceGate';
 import CornerGardens from './CornerGardens';
 import LiveMapGround from './LiveMapGround';
+import AdaptiveEnvironment from './AdaptiveEnvironment';
 import ProjectHUD from './ProjectHUD';
 import { getPlotPosition } from '../data/plotLookup';
 import { isSupabaseConfigured, fetchPlotStatuses, subscribeToPlotChanges } from '../services/supabase';
@@ -480,23 +481,20 @@ export default function Scene() {
         {/* Live Satellite Ground (Outside BVH) */}
         <LiveMapGround mapType={mapType} />
 
-        <Bvh firstHitOnly>
-        {/* Architectural lighting */}
-        <ambientLight intensity={mapType === 'satellite' ? 0.65 : 0.4} />
+        {/* Smart Adaptive Lighting & Non-blocking Environment */}
+        <AdaptiveEnvironment mapType={mapType} />
+
+        {/* Directional Sunlight with Soft Shadow Mapping */}
         <directionalLight
           castShadow={!isMobile}
           position={[120, 250, 70]}
-          intensity={mapType === 'satellite' ? 1.6 : 1.4}
+          intensity={mapType === 'satellite' ? 1.5 : 1.3}
           shadow-mapSize={isMobile ? [128, 128] : [2048, 2048]}
         >
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
 
-        <directionalLight position={[-120, 120, -70]} intensity={0.4} color="#90b8ff" />
-
-        {/* Soft environment lighting */}
-        <Environment preset="city" />
-
+        <Bvh firstHitOnly>
         {/* Road Network */}
         <RoadNetwork />
 
