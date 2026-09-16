@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 
 // Exact center coordinates provided by the user
 const CENTER_LAT = 15.1574439;
@@ -87,8 +88,9 @@ const textureCache = new Map<string, THREE.Texture>();
 const silentManager = new THREE.LoadingManager();
 silentManager.onError = () => {};
 
-// Individual Tile Component that loads its texture asynchronously with CDN fallback
+// Individual Tile Component that loads its texture asynchronously with CDN fallback and R3F invalidate()
 function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
+  const { invalidate } = useThree();
   const [texture, setTexture] = useState<THREE.Texture | null>(() => textureCache.get(tile.url) || null);
 
   useEffect(() => {
@@ -111,6 +113,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
         tex.generateMipmaps = false;
         textureCache.set(tile.url, tex);
         setTexture(tex);
+        invalidate();
       },
       undefined,
       () => {
@@ -128,6 +131,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
               fbTex.generateMipmaps = false;
               textureCache.set(tile.url, fbTex);
               setTexture(fbTex);
+              invalidate();
             },
             undefined,
             () => {}
@@ -139,7 +143,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
     return () => {
       active = false;
     };
-  }, [tile.url, tile.fallbackUrl]);
+  }, [tile.url, tile.fallbackUrl, invalidate]);
 
   return (
     <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
@@ -147,7 +151,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
       {texture ? (
         <meshBasicMaterial map={texture} depthWrite={true} />
       ) : (
-        <meshBasicMaterial color="#353a2f" depthWrite={true} />
+        <meshBasicMaterial color="#3f4537" depthWrite={true} />
       )}
     </mesh>
   );
@@ -164,13 +168,39 @@ export default function LiveMapGround({
   rotationOffset: initialRot = 0.06150,
   positionOffset: initialPos = [-115.5, 0, 28.0],
 }: LiveMapGroundProps) {
+  const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
   const [rot, setRot] = useState(initialRot);
   const [showDebug, setShowDebug] = useState(false);
+  const [baseTexture, setBaseTexture] = useState<THREE.Texture | null>(null);
+  const [extendedTexture, setExtendedTexture] = useState<THREE.Texture | null>(null);
+
+  // Load local high-res satellite webp files as immediate 100% reliable ground layer
+  useEffect(() => {
+    if (mapType === 'dark') return;
+
+    const loader = new THREE.TextureLoader(silentManager);
+    loader.load('/satellite_map.webp', (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = true;
+      setBaseTexture(tex);
+      invalidate();
+    });
+
+    loader.load('/extended_satellite_map.webp', (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = true;
+      setExtendedTexture(tex);
+      invalidate();
+    });
+  }, [mapType, invalidate]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Press Shift + M to toggle alignment debug tool
       if (e.shiftKey && (e.key === 'M' || e.key === 'm')) {
         setShowDebug(prev => !prev);
         return;
@@ -211,11 +241,18 @@ export default function LiveMapGround({
     );
   }
 
-  // Multi-scale tile hierarchy covering >50km region smoothly down to site core
-  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []); // Site core (~680m)
-  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 5), []); // Local area (~3.4km)
-  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []); // Regional area (~13.5km)
-  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []); // Macro background (~54km)
+  // Multi-scale live tile hierarchy
+  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []);
+  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 5), []);
+  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []);
+  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []);
+
+  const scaleX = 1.040;
+  const scaleY = 1.040;
+  const groundWidth = 1254.2 * scaleX;
+  const groundHeight = 1254.2 * scaleY;
+  const extendedGroundWidth = (153 / 17) * 1254.2 * scaleX;
+  const extendedGroundHeight = (153 / 17) * 1254.2 * scaleY;
 
   return (
     <group 
@@ -246,28 +283,44 @@ export default function LiveMapGround({
         </Html>
       )}
 
-      {/* Ground Base Warm Soil Color Plane (60km seamless coverage underneath) */}
+      {/* 1. Ground Base Warm Soil Color Plane (60km radius natural earth color underneath) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null}>
         <planeGeometry args={[60000, 60000]} />
-        <meshBasicMaterial color="#353a2f" depthWrite={false} />
+        <meshBasicMaterial color="#3f4537" depthWrite={false} />
       </mesh>
 
-      {/* Zoom 13 Macro layer (~54km wide coverage) */}
+      {/* 2. Extended ~11.2km Local Satellite Map Plane (Instant guaranteed local imagery) */}
+      {extendedTexture && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.0, 0]} receiveShadow raycast={() => null}>
+          <planeGeometry args={[extendedGroundWidth, extendedGroundHeight]} />
+          <meshBasicMaterial map={extendedTexture} depthWrite={true} />
+        </mesh>
+      )}
+
+      {/* 3. Site Core High-Resolution Aerial Satellite Map Plane */}
+      {baseTexture && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.9, 0]} receiveShadow raycast={() => null}>
+          <planeGeometry args={[groundWidth, groundHeight]} />
+          <meshBasicMaterial map={baseTexture} depthWrite={true} />
+        </mesh>
+      )}
+
+      {/* 4. Live Zoom 13 Macro layer (~54km wide coverage) */}
       <group>
-        {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.8} />)}
+        {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} />)}
       </group>
 
-      {/* Zoom 15 Regional layer (~13.5km wide coverage) */}
+      {/* 5. Live Zoom 15 Regional layer (~13.5km wide coverage) */}
       <group>
-        {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.2} />)}
+        {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} />)}
       </group>
 
-      {/* Zoom 17 Local layer (~3.4km wide coverage) */}
+      {/* 6. Live Zoom 17 Local layer (~3.4km wide coverage) */}
       <group>
-        {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.6} />)}
+        {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} />)}
       </group>
 
-      {/* Zoom 19 Foreground layer (Right under the masterplan plots) */}
+      {/* 7. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
       <group>
         {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} />)}
       </group>
