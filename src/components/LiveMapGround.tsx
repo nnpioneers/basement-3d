@@ -26,6 +26,16 @@ function tileToMercatorBounds(tx: number, ty: number, zoom: number) {
   return { left, right, top, bottom, tileSize };
 }
 
+interface TileData {
+  url: string;
+  fallbackUrl: string;
+  width: number;
+  height: number;
+  posX: number;
+  posZ: number;
+  key: string;
+}
+
 function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRadius: number) {
   const n = Math.pow(2, zoom);
   const centerTx = (centerLon + 180) / 360 * n;
@@ -53,8 +63,14 @@ function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRad
       const posX = (pLeft + pRight) / 2;
       const posZ = (pTop + pBottom) / 2;
       
+      const cdnSub = Math.abs(x + y) % 4;
+      // Direct Google Maps Satellite CDN URL (CORS-enabled globally)
+      const primaryUrl = `https://mt${cdnSub}.google.com/vt/lyrs=y&x=${x}&y=${y}&z=${zoom}`;
+      const fallbackUrl = `/api/tile?x=${x}&y=${y}&z=${zoom}`;
+
       tiles.push({
-        url: `/api/tile?x=${x}&y=${y}&z=${zoom}`,
+        url: primaryUrl,
+        fallbackUrl,
         width,
         height,
         posX,
@@ -66,21 +82,12 @@ function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRad
   return tiles;
 }
 
-interface TileData {
-  url: string;
-  width: number;
-  height: number;
-  posX: number;
-  posZ: number;
-  key: string;
-}
-
 // Reusable texture loader cache to avoid duplicate loads
 const textureCache = new Map<string, THREE.Texture>();
 const silentManager = new THREE.LoadingManager();
 silentManager.onError = () => {};
 
-// Individual Tile Component that loads its texture asynchronously
+// Individual Tile Component that loads its texture asynchronously with CDN fallback
 function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(() => textureCache.get(tile.url) || null);
 
@@ -93,6 +100,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
     let active = true;
     const loader = new THREE.TextureLoader(silentManager);
     loader.setCrossOrigin('anonymous');
+
     loader.load(
       tile.url,
       (tex) => {
@@ -106,13 +114,32 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
       },
       undefined,
       () => {
-        // Fallback silently if tile fails to load
+        if (!active) return;
+        if (tile.fallbackUrl) {
+          const fbLoader = new THREE.TextureLoader(silentManager);
+          fbLoader.setCrossOrigin('anonymous');
+          fbLoader.load(
+            tile.fallbackUrl,
+            (fbTex) => {
+              if (!active) return;
+              fbTex.colorSpace = THREE.SRGBColorSpace;
+              fbTex.minFilter = THREE.LinearFilter;
+              fbTex.magFilter = THREE.LinearFilter;
+              fbTex.generateMipmaps = false;
+              textureCache.set(tile.url, fbTex);
+              setTexture(fbTex);
+            },
+            undefined,
+            () => {}
+          );
+        }
       }
     );
+
     return () => {
       active = false;
     };
-  }, [tile.url]);
+  }, [tile.url, tile.fallbackUrl]);
 
   return (
     <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -120,7 +147,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
       {texture ? (
         <meshBasicMaterial map={texture} depthWrite={true} />
       ) : (
-        <meshBasicMaterial color="#2d3035" depthWrite={true} />
+        <meshBasicMaterial color="#353a2f" depthWrite={true} />
       )}
     </mesh>
   );
@@ -177,17 +204,19 @@ export default function LiveMapGround({
     return (
       <group position={[pos[0], -0.65 + pos[1], pos[2]]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[40000, 40000]} />
+          <planeGeometry args={[200000, 200000]} />
           <meshStandardMaterial color="#1a1c1e" roughness={1.0} metalness={0.0} />
         </mesh>
       </group>
     );
   }
 
-  // Generate Tile Grids with optimized radii for fast load times
-  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 3), []);
-  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 3), []);
-  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 3), []);
+  // Multi-scale tile hierarchy covering >100km wide region seamlessly
+  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []); // Core site (high res)
+  const z18Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 18, 4), []); // Near site
+  const z16Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 16, 5), []); // Local area (~7km)
+  const z14Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 14, 5), []); // Regional area (~27km)
+  const z12Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 12, 6), []); // Macro background (~127km)
 
   return (
     <group 
@@ -218,23 +247,33 @@ export default function LiveMapGround({
         </Html>
       )}
 
-      {/* Ground Base Color Plane (Immediate visibility before tiles finish loading) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null}>
-        <planeGeometry args={[30000, 30000]} />
-        <meshBasicMaterial color="#2d3035" depthWrite={false} />
+      {/* Ground Base Warm Soil Color Plane (150km radius seamless coverage underneath) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.5, 0]} receiveShadow raycast={() => null}>
+        <planeGeometry args={[200000, 200000]} />
+        <meshBasicMaterial color="#353a2f" depthWrite={false} />
       </mesh>
 
-      {/* Zoom 15 Background layer */}
+      {/* Zoom 12 Macro layer (~127km wide coverage) */}
       <group>
-        {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-2.0} />)}
-      </group>
-      
-      {/* Zoom 17 Midground layer */}
-      <group>
-        {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} />)}
+        {z12Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-2.5} />)}
       </group>
 
-      {/* Zoom 19 Foreground layer (Right under the plots) */}
+      {/* Zoom 14 Regional layer (~27km wide coverage) */}
+      <group>
+        {z14Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.8} />)}
+      </group>
+
+      {/* Zoom 16 Local layer (~7km wide coverage) */}
+      <group>
+        {z16Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.1} />)}
+      </group>
+      
+      {/* Zoom 18 Near layer (~1.4km wide coverage) */}
+      <group>
+        {z18Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.4} />)}
+      </group>
+
+      {/* Zoom 19 Foreground layer (Right under the masterplan plots) */}
       <group>
         {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} />)}
       </group>

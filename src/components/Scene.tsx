@@ -529,7 +529,7 @@ export default function Scene() {
           position: isMobile ? [0, 560, 180] : [0, 420, 140],
           fov: 45,
           near: 1,
-          far: 15000
+          far: 100000
         }}
         gl={{
           logarithmicDepthBuffer: true,
@@ -540,7 +540,7 @@ export default function Scene() {
         }}
       >
         <Suspense fallback={null}>
-        <color attach="background" args={[mapType === 'satellite' ? '#14181b' : '#121418']} />
+        <color attach="background" args={[mapType === 'satellite' ? '#282c23' : '#121418']} />
 
         <Bvh firstHitOnly>
         {/* Architectural lighting */}
@@ -608,7 +608,7 @@ export default function Scene() {
           minPolarAngle={0}
           enableRotate={is3D}
           minDistance={15}
-          maxDistance={7000}
+          maxDistance={25000}
           enableDamping={true}
           dampingFactor={0.08}
         />
