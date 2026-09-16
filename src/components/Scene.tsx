@@ -561,7 +561,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           far: 100000000
         }}
         gl={{
-          logarithmicDepthBuffer: true,
+          logarithmicDepthBuffer: !isMobile, // Disable on mobile to fix zebra-stripe artifacts on Mali/Android GPUs
           antialias: true,
           powerPreference: 'high-performance',
           alpha: false,

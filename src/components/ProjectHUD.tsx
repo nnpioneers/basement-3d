@@ -473,32 +473,6 @@ export default function ProjectHUD({
             <span>🎯</span> Locate
           </button>
 
-          {/* Park Lab Button */}
-          <button
-            className="hud-btn"
-            onClick={() => {
-              window.history.pushState({}, '', '/park-lab');
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-            title="Open Park Lab 3D View"
-            style={{
-              padding: '0 14px',
-              background: 'rgba(52, 199, 89, 0.15)',
-              color: '#34c759',
-              border: '1px solid rgba(52, 199, 89, 0.35)',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              fontWeight: '700',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              minHeight: '44px',
-            }}
-          >
-            <span>🌳</span> Park Lab
-          </button>
         </div>
       </div>
 
