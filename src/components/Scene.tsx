@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, ContactShadows, Bvh } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Bvh, Text } from '@react-three/drei';
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import RoadNetwork from './RoadNetwork';
 import PlotsLeft from './PlotsLeft';
@@ -322,24 +322,84 @@ function CameraManager({
   return null;
 }
 
-function MasterplanVisibilityManager({ groupRef }: { groupRef: React.RefObject<THREE.Group | null> }) {
+function ProjectLocationDot({ dotRef }: { dotRef: React.RefObject<THREE.Group | null> }) {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    if (!dotRef.current || !dotRef.current.visible) return;
+    const dist = camera.position.length();
+    // Scale location marker smoothly with camera distance for a clean geographic pin at regional view
+    const targetScale = Math.max(10, dist * 0.014);
+    dotRef.current.scale.setScalar(targetScale);
+  });
+
+  return (
+    <group ref={dotRef} position={[0, 2.0, -21.65]} visible={false}>
+      {/* Central Lime-Green Core Dot (Matching User Image 2) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={102}>
+        <circleGeometry args={[1.5, 32]} />
+        <meshBasicMaterial color="#b2ff59" depthTest={false} depthWrite={false} />
+      </mesh>
+
+      {/* Crisp White Outer Ring */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={101}>
+        <ringGeometry args={[1.5, 2.2, 32]} />
+        <meshBasicMaterial color="#ffffff" opacity={0.95} transparent depthTest={false} depthWrite={false} />
+      </mesh>
+
+      {/* Dark Subtle Shadow Ring for Contrast */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} renderOrder={100}>
+        <ringGeometry args={[2.2, 2.8, 32]} />
+        <meshBasicMaterial color="#000000" opacity={0.35} transparent depthTest={false} depthWrite={false} />
+      </mesh>
+
+      {/* Geographic Location Text Label Beside Dot (Matching Image 2 "Darapura" style) */}
+      <Text
+        font="/fonts/Inter-Bold.woff"
+        position={[3.5, 0.2, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={3.2}
+        color="#ffffff"
+        anchorX="left"
+        anchorY="middle"
+        fontWeight="bold"
+        outlineWidth={0.35}
+        outlineColor="#000000"
+        renderOrder={105}
+        raycast={() => null}
+      >
+        3D Masterplan
+      </Text>
+    </group>
+  );
+}
+
+function MasterplanVisibilityManager({
+  masterplanRef,
+  dotRef,
+}: {
+  masterplanRef: React.RefObject<THREE.Group | null>;
+  dotRef: React.RefObject<THREE.Group | null>;
+}) {
   const { camera, invalidate } = useThree();
   const visibleRef = useRef(true);
 
   useFrame(() => {
-    if (!groupRef.current) return;
+    if (!masterplanRef.current || !dotRef.current) return;
     const dist = camera.position.length();
 
-    // Hysteresis threshold:
-    // Zooming OUT: Hide masterplan when camera distance > 2200
-    // Zooming IN: Re-show masterplan when camera distance < 1800
-    if (visibleRef.current && dist > 2200) {
+    // Threshold Tuning (Reference 1 vs Reference 3):
+    // Zooming OUT: Masterplan stays visible until distance > 6500, then replaces with location dot
+    // Zooming IN: Location dot disappears & masterplan returns when distance < 4500
+    if (visibleRef.current && dist > 6500) {
       visibleRef.current = false;
-      groupRef.current.visible = false;
+      masterplanRef.current.visible = false;
+      dotRef.current.visible = true;
       invalidate();
-    } else if (!visibleRef.current && dist < 1800) {
+    } else if (!visibleRef.current && dist < 4500) {
       visibleRef.current = true;
-      groupRef.current.visible = true;
+      masterplanRef.current.visible = true;
+      dotRef.current.visible = false;
       invalidate();
     }
   });
@@ -364,6 +424,7 @@ function SceneReadinessNotifier({ onReady }: { onReady: () => void }) {
 
 export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data' | 'compile' | 'ready') => void }) {
   const masterplanGroupRef = useRef<THREE.Group>(null);
+  const locationDotRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
     onStageChange?.('data');
@@ -477,7 +538,8 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
 
-        <MasterplanVisibilityManager groupRef={masterplanGroupRef} />
+        <MasterplanVisibilityManager masterplanRef={masterplanGroupRef} dotRef={locationDotRef} />
+        <ProjectLocationDot dotRef={locationDotRef} />
 
         <Bvh firstHitOnly>
         <group ref={masterplanGroupRef}>
