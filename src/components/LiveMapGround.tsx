@@ -166,7 +166,7 @@ interface LiveMapGroundProps {
 export default function LiveMapGround({
   mapType = 'satellite',
   rotationOffset: initialRot = 0.0615,
-  positionOffset: initialPos = [-78.0, 0, 10.0],
+  positionOffset: initialPos = [-118.0, 0, 21.0],
 }: LiveMapGroundProps) {
   const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
