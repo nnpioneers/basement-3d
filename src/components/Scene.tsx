@@ -322,9 +322,35 @@ function CameraManager({
   return null;
 }
 
+function MasterplanVisibilityManager({ groupRef }: { groupRef: React.RefObject<THREE.Group | null> }) {
+  const { camera, invalidate } = useThree();
+  const visibleRef = useRef(true);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const dist = camera.position.length();
+
+    // Hysteresis threshold:
+    // Zooming OUT: Hide masterplan when camera distance > 2200
+    // Zooming IN: Re-show masterplan when camera distance < 1800
+    if (visibleRef.current && dist > 2200) {
+      visibleRef.current = false;
+      groupRef.current.visible = false;
+      invalidate();
+    } else if (!visibleRef.current && dist < 1800) {
+      visibleRef.current = true;
+      groupRef.current.visible = true;
+      invalidate();
+    }
+  });
+
+  return null;
+}
+
 
 
 export default function Scene() {
+  const masterplanGroupRef = useRef<THREE.Group>(null);
   const [is3D, setIs3D] = useState(true);
   const [mapType, setMapType] = useState<'satellite' | 'dark'>('satellite');
   const [selectedPlotPos, setSelectedPlotPos] = useState<[number, number, number] | null>(null);
@@ -429,7 +455,10 @@ export default function Scene() {
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
 
+        <MasterplanVisibilityManager groupRef={masterplanGroupRef} />
+
         <Bvh firstHitOnly>
+        <group ref={masterplanGroupRef}>
         {/* Road Network */}
         <RoadNetwork />
 
@@ -468,6 +497,7 @@ export default function Scene() {
         {mapType === 'dark' && (
           <ContactShadows position={[0, -0.5, 0]} opacity={0.4} scale={1200} blur={2} far={15} frames={1} />
         )}
+        </group>
 
         <OrbitControls
           makeDefault
