@@ -145,14 +145,14 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
     };
   }, [tile.url, tile.fallbackUrl, invalidate]);
 
+  // DO NOT RENDER ANYTHING IF TEXTURE IS NOT LOADED YET!
+  // This allows baseTexture and extendedTexture to show through cleanly without black rectangular blocks!
+  if (!texture) return null;
+
   return (
     <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
       <planeGeometry args={[tile.width, tile.height]} />
-      {texture ? (
-        <meshBasicMaterial map={texture} depthWrite={true} />
-      ) : (
-        <meshBasicMaterial color="#3f4537" depthWrite={true} />
-      )}
+      <meshBasicMaterial map={texture} depthWrite={true} />
     </mesh>
   );
 }
