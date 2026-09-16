@@ -218,7 +218,7 @@ function RoadNetwork() {
       for (let i = 0; i < steps; i++) {
         const cx = startX + Math.cos(angle) * (i * (dashLength + gapLength) + dashLength / 2);
         const cy = startY + Math.sin(angle) * (i * (dashLength + gapLength) + dashLength / 2);
-        dashes.push({ key: `${startX}-${startY}-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, angle] });
+        dashes.push({ key: `${startX}-${startY}-${i}`, pos: [cx, cy, 0.51], rot: [0, 0, angle] });
       }
     };
 
@@ -249,7 +249,7 @@ function RoadNetwork() {
       const cx = Math.cos(angle) * r;
       const cy = Math.sin(angle) * r + 21.65;
       const tangent = angle + Math.PI / 2;
-      dashes.push({ key: `roundabout-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, tangent] });
+      dashes.push({ key: `roundabout-${i}`, pos: [cx, cy, 0.51], rot: [0, 0, tangent] });
     }
 
     return dashes;
@@ -264,7 +264,7 @@ function RoadNetwork() {
         const offset = (i - numStripes / 2 + 0.5) * 1.0;
         const cx = x + Math.cos(rotation + Math.PI/2) * offset;
         const cy = y + Math.sin(rotation + Math.PI/2) * offset;
-        stripes.push({ key: `zebra-${x}-${y}-${i}`, pos: [cx, cy, 0.71], rot: [0, 0, rotation] });
+        stripes.push({ key: `zebra-${x}-${y}-${i}`, pos: [cx, cy, 0.51], rot: [0, 0, rotation] });
       }
     };
 
@@ -379,7 +379,7 @@ function RoadNetwork() {
         <Text
           key={`label-${index}`}
           font="/fonts/Inter-Bold.woff"
-          position={[label.pos[0], label.pos[1], 0.72]}
+          position={[label.pos[0], label.pos[1], 0.52]}
           rotation={[0, 0, label.rot]}
           fontSize={label.size}
           color="#ffffff"
