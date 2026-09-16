@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
+import { useThree, useFrame } from '@react-three/fiber';
 
 // Exact center coordinates provided by the user
 const CENTER_LAT = 15.1574439;
@@ -175,6 +175,27 @@ export default function LiveMapGround({
   const [baseTexture, setBaseTexture] = useState<THREE.Texture | null>(null);
   const [extendedTexture, setExtendedTexture] = useState<THREE.Texture | null>(null);
 
+  // Dynamic Camera Distance Tile Culling
+  const [tileBand, setTileBand] = useState<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
+  const currentBandRef = useRef<'CLOSE' | 'MEDIUM' | 'FAR'>('CLOSE');
+
+  useFrame(({ camera }) => {
+    const dist = camera.position.length();
+    let newBand: 'CLOSE' | 'MEDIUM' | 'FAR' = 'CLOSE';
+    if (dist > 1200) {
+      newBand = 'FAR';
+    } else if (dist > 550) {
+      newBand = 'MEDIUM';
+    } else {
+      newBand = 'CLOSE';
+    }
+
+    if (newBand !== currentBandRef.current) {
+      currentBandRef.current = newBand;
+      setTileBand(newBand);
+    }
+  });
+
   // Sync initialPos and initialRot whenever code props change (enables instant live hot reload)
   useEffect(() => {
     setPos(initialPos);
@@ -248,11 +269,11 @@ export default function LiveMapGround({
     );
   }
 
-  // Multi-scale live tile hierarchy
-  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []);
-  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 5), []);
-  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []);
-  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []);
+  // Multi-scale live tile hierarchy with optimized tile radii
+  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 2), []);
+  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 3), []);
+  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 3), []);
+  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 3), []);
 
   // Photo 1 Original Calibrated Ground Scale (1.040)
   const scaleX = 1.040;
@@ -314,24 +335,32 @@ export default function LiveMapGround({
       )}
 
       {/* 4. Live Zoom 13 Macro layer (~54km wide coverage) */}
-      <group>
-        {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} />)}
-      </group>
+      {tileBand === 'FAR' && (
+        <group>
+          {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.5} />)}
+        </group>
+      )}
 
       {/* 5. Live Zoom 15 Regional layer (~13.5km wide coverage) */}
-      <group>
-        {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} />)}
-      </group>
+      {(tileBand === 'FAR' || tileBand === 'MEDIUM') && (
+        <group>
+          {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.0} />)}
+        </group>
+      )}
 
       {/* 6. Live Zoom 17 Local layer (~3.4km wide coverage) */}
-      <group>
-        {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} />)}
-      </group>
+      {(tileBand === 'MEDIUM' || tileBand === 'CLOSE') && (
+        <group>
+          {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.5} />)}
+        </group>
+      )}
 
       {/* 7. Live Zoom 19 Foreground layer (Right under the masterplan plots) */}
-      <group>
-        {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} />)}
-      </group>
+      {tileBand === 'CLOSE' && (
+        <group>
+          {z19Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={0} />)}
+        </group>
+      )}
     </group>
   );
 }

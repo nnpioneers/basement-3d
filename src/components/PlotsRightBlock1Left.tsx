@@ -1,6 +1,7 @@
-import { useMemo, useCallback, memo } from 'react';
+import { useEffect, useMemo, useCallback, memo } from 'react';
 import InteractivePlot, { type PlotSpec } from './InteractivePlot';
 import type { PlotStatusMap } from '../types/plot';
+import { registerPlotsInfoOutlines } from '../data/plotLookup';
 
 function PlotsRightBlock1Left({
   selectedPlotId,
@@ -46,6 +47,10 @@ function PlotsRightBlock1Left({
 
     return [...bottomPlots, ...topPlots];
   }, []);
+
+  useEffect(() => {
+    registerPlotsInfoOutlines('PlotsRightBlock1Left', plotsInfo);
+  }, [plotsInfo]);
 
   const handleClick = useCallback((id: number, worldPos: [number, number, number]) => {
     onPlotSelect?.(id, worldPos);
