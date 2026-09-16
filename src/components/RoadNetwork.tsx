@@ -378,6 +378,7 @@ function RoadNetwork() {
       ].map((label, index) => (
         <Text
           key={`label-${index}`}
+          font="/fonts/Inter-Bold.woff"
           position={[label.pos[0], label.pos[1], 0.72]}
           rotation={[0, 0, label.rot]}
           fontSize={label.size}

@@ -48,6 +48,7 @@ function ParksAndCASite() {
         <meshStandardMaterial attach="material-1" color="#8b9dc3" roughness={0.9} />
       </mesh>
       <Text
+        font="/fonts/Inter-Bold.woff"
         position={[-56.25, 75.0, 0.35]}
         rotation={[0, 0, 0]}
         fontSize={7.0}

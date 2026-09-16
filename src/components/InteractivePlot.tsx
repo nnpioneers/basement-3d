@@ -161,6 +161,7 @@ function getPlotMaterial(color: string) {
 }
 
 const commonTextProps = {
+  font: '/fonts/Inter-Bold.woff',
   raycast: () => null,
 };
 

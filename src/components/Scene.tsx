@@ -347,10 +347,27 @@ function MasterplanVisibilityManager({ groupRef }: { groupRef: React.RefObject<T
   return null;
 }
 
+function SceneReadinessNotifier({ onReady }: { onReady: () => void }) {
+  const { invalidate } = useThree();
+  const readyFiredRef = useRef(false);
 
+  useFrame(() => {
+    if (!readyFiredRef.current) {
+      readyFiredRef.current = true;
+      onReady();
+      invalidate();
+    }
+  });
 
-export default function Scene() {
+  return null;
+}
+
+export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data' | 'compile' | 'ready') => void }) {
   const masterplanGroupRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    onStageChange?.('data');
+  }, [onStageChange]);
   const [is3D, setIs3D] = useState(true);
   const [mapType, setMapType] = useState<'satellite' | 'dark'>('satellite');
   const [selectedPlotPos, setSelectedPlotPos] = useState<[number, number, number] | null>(null);
@@ -422,6 +439,10 @@ export default function Scene() {
         frameloop="demand"
         shadows={!isMobile}
         dpr={dpr}
+        onCreated={({ gl, scene, camera }) => {
+          gl.compile(scene, camera);
+          onStageChange?.('compile');
+        }}
         camera={{
           position: isMobile ? [0, 560, 180] : [0, 420, 140],
           fov: 45,
@@ -436,6 +457,7 @@ export default function Scene() {
           stencil: false,
         }}
       >
+        <SceneReadinessNotifier onReady={() => onStageChange?.('ready')} />
         <Suspense fallback={null}>
         <color attach="background" args={[mapType === 'satellite' ? '#282c23' : '#121418']} />
 

@@ -156,6 +156,7 @@ function EntranceGate() {
 
         {/* TOP TEXT FOR 2D VIEW (Flat on the top surface, facing up) */}
         <Text
+          font="/fonts/Inter-Bold.woff"
           position={[0, 0.41, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           fontSize={0.8}
@@ -170,6 +171,7 @@ function EntranceGate() {
 
         {/* FRONT TEXT: ENTRANCE */}
         <Text
+          font="/fonts/Inter-Bold.woff"
           position={[0, 0, 0.81]}
           fontSize={0.65}
           color="#111111"
@@ -183,6 +185,7 @@ function EntranceGate() {
 
         {/* BACK TEXT: EXIT */}
         <Text
+          font="/fonts/Inter-Bold.woff"
           position={[0, 0, -0.81]}
           rotation={[0, Math.PI, 0]}
           fontSize={0.65}
