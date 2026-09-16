@@ -211,12 +211,14 @@ export default function LiveMapGround({
     );
   }
 
-  // Multi-scale tile hierarchy covering >100km wide region seamlessly
+  // Multi-scale tile hierarchy covering >1000km wide region seamlessly down to site core
   const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []); // Core site (high res)
-  const z18Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 18, 4), []); // Near site
+  const z18Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 18, 4), []); // Near site (~1.4km)
   const z16Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 16, 5), []); // Local area (~7km)
   const z14Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 14, 5), []); // Regional area (~27km)
-  const z12Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 12, 6), []); // Macro background (~127km)
+  const z12Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 12, 6), []); // District scale (~127km)
+  const z10Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 10, 4), []); // State scale (~350km)
+  const z8Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 8, 4), []);   // Macro/subcontinent scale (~1400km)
 
   return (
     <group 
@@ -248,12 +250,22 @@ export default function LiveMapGround({
       )}
 
       {/* Ground Base Warm Soil Color Plane (150km radius seamless coverage underneath) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.5, 0]} receiveShadow raycast={() => null}>
-        <planeGeometry args={[200000, 200000]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5.5, 0]} receiveShadow raycast={() => null}>
+        <planeGeometry args={[1000000, 1000000]} />
         <meshBasicMaterial color="#353a2f" depthWrite={false} />
       </mesh>
 
-      {/* Zoom 12 Macro layer (~127km wide coverage) */}
+      {/* Zoom 8 Macro/Subcontinent layer (~1400km wide coverage) */}
+      <group>
+        {z8Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-4.2} />)}
+      </group>
+
+      {/* Zoom 10 State layer (~350km wide coverage) */}
+      <group>
+        {z10Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-3.4} />)}
+      </group>
+
+      {/* Zoom 12 District layer (~127km wide coverage) */}
       <group>
         {z12Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-2.5} />)}
       </group>
