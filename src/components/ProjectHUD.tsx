@@ -392,7 +392,7 @@ export default function ProjectHUD({
                   outline: 'none',
                   color: '#ffffff',
                   fontSize: '13px',
-                  width: '130px',
+                  width: '100%',
                   fontWeight: '500',
                 }}
               />
