@@ -561,7 +561,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           far: 100000000
         }}
         gl={{
-          logarithmicDepthBuffer: true,
+          logarithmicDepthBuffer: false,
           antialias: true,
           powerPreference: 'high-performance',
           alpha: false,
@@ -585,6 +585,8 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           position={[120, 250, 70]}
           intensity={mapType === 'satellite' ? 1.5 : 1.3}
           shadow-mapSize={isMobile ? [128, 128] : [2048, 2048]}
+          shadow-bias={-0.0005}
+          shadow-normalBias={0.04}
         >
           <orthographicCamera attach="shadow-camera" args={[-350, 350, 350, -350]} />
         </directionalLight>
