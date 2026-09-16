@@ -22,7 +22,6 @@ import PlotsRightBlock3Left from './PlotsRightBlock3Left';
 import PlotsRightBlock3Right from './PlotsRightBlock3Right';
 import PlotsRightBlock4Left from './PlotsRightBlock4Left';
 import PlotsRightBlock4Right from './PlotsRightBlock4Right';
-import MergedPlotOutlines from './MergedPlotOutlines';
 import Roundabout from './Roundabout';
 import ClockTower from './ClockTower';
 import ParksAndCASite from './ParksAndCASite';
@@ -521,9 +520,6 @@ export default function Scene() {
         <PlotsRightBlock3Right selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
         <PlotsRightBlock4Left selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
         <PlotsRightBlock4Right selectedPlotId={selectedPlotId} onPlotSelect={handlePlotSelect} plotStatusMap={plotStatusMap} />
-
-        {/* Merged Single Draw-Call Plot Outlines (Reduces 201 individual line loop draw calls to 1) */}
-        <MergedPlotOutlines />
 
         <ParksAndCASite />
         <CornerGardens />

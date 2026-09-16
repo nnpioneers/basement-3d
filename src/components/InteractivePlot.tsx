@@ -54,6 +54,33 @@ function getPlotGeom(plot: PlotSpec) {
   return geomCache.get(key)!;
 }
 
+const borderGeomCache = new Map<string, THREE.BufferGeometry>();
+const BORDER_Z = 0.235;
+
+function getPlotBorderGeom(plot: PlotSpec) {
+  const key = `${plot.depthB}_${plot.depthT}_${plot.frontage}`;
+  if (!borderGeomCache.has(key)) {
+    const points = [
+      new THREE.Vector3(0, 0, BORDER_Z),
+      new THREE.Vector3(0, plot.frontage, BORDER_Z),
+      new THREE.Vector3(-plot.depthT, plot.frontage, BORDER_Z),
+      new THREE.Vector3(-plot.depthB, 0, BORDER_Z),
+    ];
+    const g = new THREE.BufferGeometry().setFromPoints(points);
+    borderGeomCache.set(key, g);
+  }
+  return borderGeomCache.get(key)!;
+}
+
+const borderMaterial = new THREE.LineBasicMaterial({
+  color: 0x000000,
+  depthTest: true,
+  depthWrite: false,
+  polygonOffset: true,
+  polygonOffsetFactor: -4,
+  polygonOffsetUnits: -4,
+});
+
 const WHITE_OUTLINE_Z = 0.245;
 const LABEL_Z = 0.255;
 
@@ -200,9 +227,10 @@ const InteractivePlotComponent = ({
   onClick: (id: number, worldPos: [number, number, number]) => void;
   status?: PlotStatus;
 }) => {
-  const { geom, metrics, worldPos, dimAnchors, wCorners } =
+  const { geom, borderGeom, metrics, worldPos, dimAnchors, wCorners } =
     useMemo(() => {
       const g = getPlotGeom(plot);
+      const bg = getPlotBorderGeom(plot);
 
       const areaSqM = ((plot.depthB + plot.depthT) / 2) * plot.frontage;
       const areaSqFt = areaSqM * 10.7639;
@@ -260,6 +288,7 @@ const InteractivePlotComponent = ({
 
       return {
         geom: g,
+        borderGeom: bg,
         metrics: { fmtM2, fmtFt2, centerX, centerY },
         worldPos: [x + centerX, 0.5, -(y + centerY)] as [number, number, number],
         wCorners,
@@ -352,7 +381,15 @@ const InteractivePlotComponent = ({
           setHovered(false);
           document.body.style.cursor = 'auto';
         }}
-      />
+      >
+        {/* Solid crisp black line border around every plot */}
+        <lineLoop
+          geometry={borderGeom}
+          material={borderMaterial}
+          raycast={() => null}
+          renderOrder={10}
+        />
+      </mesh>
 
       {/* ── Native WebGL Sharp White Dashed Line & Crosshairs (Zero per-frame JS allocations) ── */}
       {isSelected && (

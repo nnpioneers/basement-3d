@@ -1,24 +1,27 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import * as THREE from 'three';
+import { useThree } from '@react-three/fiber';
 import { subscribeOutlines, getAllOutlinePositions } from '../data/plotLookup';
 
 const borderMaterial = new THREE.LineBasicMaterial({
   color: 0x000000,
   depthTest: true,
   depthWrite: false,
-  polygonOffset: true,
-  polygonOffsetFactor: -4,
-  polygonOffsetUnits: -4,
 });
 
 function MergedPlotOutlines() {
+  const { invalidate } = useThree();
   const [positions, setPositions] = useState<number[]>(() => getAllOutlinePositions());
 
   useEffect(() => {
+    // Invalidate R3F frame loop on mount & subscription changes for guaranteed instant rendering
+    invalidate();
+
     return subscribeOutlines(() => {
       setPositions(getAllOutlinePositions());
+      invalidate();
     });
-  }, []);
+  }, [invalidate]);
 
   const geometry = useMemo(() => {
     if (positions.length === 0) return null;
@@ -35,7 +38,7 @@ function MergedPlotOutlines() {
         geometry={geometry}
         material={borderMaterial}
         raycast={() => null}
-        renderOrder={10}
+        renderOrder={50}
       />
     </group>
   );

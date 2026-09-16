@@ -32,7 +32,7 @@ export function registerBlockOutlines(blockId: string, positions: number[]) {
 }
 
 export function registerPlotsInfoOutlines(blockId: string, plotsInfo: { spec: { depthB: number; depthT: number; frontage: number }; x: number; y: number }[]) {
-  const BORDER_Z = 0.235;
+  const BORDER_Z = 0.25;
   const positions: number[] = [];
   plotsInfo.forEach(({ spec, x, y }) => {
     const c0 = [x, y, BORDER_Z];
