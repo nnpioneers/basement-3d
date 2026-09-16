@@ -55,8 +55,22 @@ function DynamicTileLayer({
   active: boolean 
 }) {
   const { camera } = useThree();
-  const [centerTx, setCenterTx] = useState<number | null>(null);
-  const [centerTy, setCenterTy] = useState<number | null>(null);
+  
+  // Initialize synchronously to center so first frame renders immediately (no black flash)
+  const initialTx = useMemo(() => {
+    const centerMerc = latLonToMercator(CENTER_LAT, CENTER_LON);
+    const n = Math.pow(2, zoom);
+    return Math.floor((centerMerc.x + Math.PI * R) / (2 * Math.PI * R) * n);
+  }, [zoom]);
+
+  const initialTy = useMemo(() => {
+    const centerMerc = latLonToMercator(CENTER_LAT, CENTER_LON);
+    const n = Math.pow(2, zoom);
+    return Math.floor((Math.PI * R - centerMerc.y) / (2 * Math.PI * R) * n);
+  }, [zoom]);
+
+  const [centerTx, setCenterTx] = useState<number | null>(initialTx);
+  const [centerTy, setCenterTy] = useState<number | null>(initialTy);
 
   useFrame(() => {
     if (!active) return;

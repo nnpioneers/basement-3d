@@ -397,6 +397,24 @@ function SceneReadinessNotifier({ onReady }: { onReady: () => void }) {
   return null;
 }
 
+function CameraFrustumManager() {
+  const { camera } = useThree();
+  useFrame(() => {
+    const dist = camera.position.length();
+    // Dynamically scale frustum to maintain perfect Z-buffer precision at all scales.
+    // This entirely solves mobile Z-fighting, geometry popping, and text flashing.
+    const newNear = Math.max(1, dist * 0.005);
+    const newFar = Math.max(5000, dist * 5);
+    
+    if (Math.abs(camera.near - newNear) > newNear * 0.1 || Math.abs(camera.far - newFar) > newFar * 0.1) {
+      camera.near = newNear;
+      camera.far = newFar;
+      camera.updateProjectionMatrix();
+    }
+  });
+  return null;
+}
+
 export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data' | 'compile' | 'ready') => void }) {
   const masterplanGroupRef = useRef<THREE.Group>(null);
   const locationDotRef = useRef<THREE.Group>(null);
@@ -486,7 +504,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
           far: 100000000
         }}
         gl={{
-          logarithmicDepthBuffer: !isMobile,
+          logarithmicDepthBuffer: true,
           antialias: true,
           powerPreference: 'high-performance',
           alpha: false,
@@ -494,6 +512,7 @@ export default function Scene({ onStageChange }: { onStageChange?: (stage: 'data
         }}
       >
         <SceneReadinessNotifier onReady={() => onStageChange?.('ready')} />
+        <CameraFrustumManager />
         <Suspense fallback={null}>
         <color attach="background" args={[mapType === 'satellite' ? '#282c23' : '#121418']} />
 
