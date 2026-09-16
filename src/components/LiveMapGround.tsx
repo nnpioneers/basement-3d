@@ -142,7 +142,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
   }, [tile.url, tile.fallbackUrl]);
 
   return (
-    <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    <mesh position={[tile.posX, yOffset, tile.posZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
       <planeGeometry args={[tile.width, tile.height]} />
       {texture ? (
         <meshBasicMaterial map={texture} depthWrite={true} />
@@ -203,22 +203,19 @@ export default function LiveMapGround({
   if (mapType === 'dark') {
     return (
       <group position={[pos[0], -0.65 + pos[1], pos[2]]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[200000, 200000]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow raycast={() => null}>
+          <planeGeometry args={[60000, 60000]} />
           <meshStandardMaterial color="#1a1c1e" roughness={1.0} metalness={0.0} />
         </mesh>
       </group>
     );
   }
 
-  // Multi-scale tile hierarchy covering >1000km wide region seamlessly down to site core
-  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []); // Core site (high res)
-  const z18Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 18, 4), []); // Near site (~1.4km)
-  const z16Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 16, 5), []); // Local area (~7km)
-  const z14Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 14, 5), []); // Regional area (~27km)
-  const z12Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 12, 6), []); // District scale (~127km)
-  const z10Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 10, 4), []); // State scale (~350km)
-  const z8Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 8, 4), []);   // Macro/subcontinent scale (~1400km)
+  // Multi-scale tile hierarchy covering >50km region smoothly down to site core
+  const z19Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 19, 4), []); // Site core (~680m)
+  const z17Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 17, 5), []); // Local area (~3.4km)
+  const z15Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 15, 5), []); // Regional area (~13.5km)
+  const z13Tiles = useMemo(() => getTileGrid(CENTER_LAT, CENTER_LON, 13, 5), []); // Macro background (~54km)
 
   return (
     <group 
@@ -249,40 +246,25 @@ export default function LiveMapGround({
         </Html>
       )}
 
-      {/* Ground Base Warm Soil Color Plane (150km radius seamless coverage underneath) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5.5, 0]} receiveShadow raycast={() => null}>
-        <planeGeometry args={[1000000, 1000000]} />
+      {/* Ground Base Warm Soil Color Plane (60km seamless coverage underneath) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow raycast={() => null}>
+        <planeGeometry args={[60000, 60000]} />
         <meshBasicMaterial color="#353a2f" depthWrite={false} />
       </mesh>
 
-      {/* Zoom 8 Macro/Subcontinent layer (~1400km wide coverage) */}
+      {/* Zoom 13 Macro layer (~54km wide coverage) */}
       <group>
-        {z8Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-4.2} />)}
+        {z13Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.8} />)}
       </group>
 
-      {/* Zoom 10 State layer (~350km wide coverage) */}
+      {/* Zoom 15 Regional layer (~13.5km wide coverage) */}
       <group>
-        {z10Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-3.4} />)}
+        {z15Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.2} />)}
       </group>
 
-      {/* Zoom 12 District layer (~127km wide coverage) */}
+      {/* Zoom 17 Local layer (~3.4km wide coverage) */}
       <group>
-        {z12Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-2.5} />)}
-      </group>
-
-      {/* Zoom 14 Regional layer (~27km wide coverage) */}
-      <group>
-        {z14Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.8} />)}
-      </group>
-
-      {/* Zoom 16 Local layer (~7km wide coverage) */}
-      <group>
-        {z16Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-1.1} />)}
-      </group>
-      
-      {/* Zoom 18 Near layer (~1.4km wide coverage) */}
-      <group>
-        {z18Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.4} />)}
+        {z17Tiles.map(tile => <MapTile key={tile.key} tile={tile} yOffset={-0.6} />)}
       </group>
 
       {/* Zoom 19 Foreground layer (Right under the masterplan plots) */}

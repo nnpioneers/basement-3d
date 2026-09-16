@@ -542,6 +542,9 @@ export default function Scene() {
         <Suspense fallback={null}>
         <color attach="background" args={[mapType === 'satellite' ? '#282c23' : '#121418']} />
 
+        {/* Live Satellite Ground (Outside BVH) */}
+        <LiveMapGround mapType={mapType} />
+
         <Bvh firstHitOnly>
         {/* Architectural lighting */}
         <ambientLight intensity={mapType === 'satellite' ? 0.65 : 0.4} />
@@ -558,9 +561,6 @@ export default function Scene() {
 
         {/* Soft environment lighting */}
         <Environment preset="city" />
-
-        {/* Live Satellite Ground */}
-        <LiveMapGround mapType={mapType} />
 
         {/* Road Network */}
         <RoadNetwork />
