@@ -17,13 +17,13 @@ function latLonToMercator(lat: number, lon: number) {
 function tileToMercatorBounds(tx: number, ty: number, zoom: number) {
   const n = Math.pow(2, zoom);
   const tileSize = (2 * Math.PI * R) / n;
-  
+
   const left = -Math.PI * R + (tx * tileSize);
   const right = left + tileSize;
-  
+
   const top = Math.PI * R - (ty * tileSize);
   const bottom = top - tileSize;
-  
+
   return { left, right, top, bottom, tileSize };
 }
 
@@ -42,28 +42,28 @@ function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRad
   const centerTx = (centerLon + 180) / 360 * n;
   const latRad = centerLat * Math.PI / 180;
   const centerTy = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
-  
+
   const cx = Math.floor(centerTx);
   const cy = Math.floor(centerTy);
-  
+
   const centerMerc = latLonToMercator(centerLat, centerLon);
   const scale = Math.cos(centerLat * Math.PI / 180);
-  
+
   const tiles: TileData[] = [];
   for (let x = cx - gridRadius; x <= cx + gridRadius; x++) {
     for (let y = cy - gridRadius; y <= cy + gridRadius; y++) {
       const bounds = tileToMercatorBounds(x, y, zoom);
-      
+
       const pLeft = (bounds.left - centerMerc.x) * scale;
       const pRight = (bounds.right - centerMerc.x) * scale;
       const pTop = -(bounds.top - centerMerc.y) * scale;
       const pBottom = -(bounds.bottom - centerMerc.y) * scale;
-      
+
       const width = Math.abs(pRight - pLeft);
       const height = Math.abs(pBottom - pTop);
       const posX = (pLeft + pRight) / 2;
       const posZ = (pTop + pBottom) / 2;
-      
+
       const cdnSub = Math.abs(x + y) % 4;
       // Direct Google Maps Satellite CDN URL (CORS-enabled globally)
       const primaryUrl = `https://mt${cdnSub}.google.com/vt/lyrs=y&x=${x}&y=${y}&z=${zoom}`;
@@ -86,7 +86,7 @@ function getTileGrid(centerLat: number, centerLon: number, zoom: number, gridRad
 // Reusable texture loader cache to avoid duplicate loads
 const textureCache = new Map<string, THREE.Texture>();
 const silentManager = new THREE.LoadingManager();
-silentManager.onError = () => {};
+silentManager.onError = () => { };
 
 // Individual Tile Component that loads its texture asynchronously with CDN fallback and R3F invalidate()
 function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
@@ -134,7 +134,7 @@ function MapTile({ tile, yOffset }: { tile: TileData, yOffset: number }) {
               invalidate();
             },
             undefined,
-            () => {}
+            () => { }
           );
         }
       }
@@ -165,8 +165,8 @@ interface LiveMapGroundProps {
 
 export default function LiveMapGround({
   mapType = 'satellite',
-  rotationOffset: initialRot = 0.06150,
-  positionOffset: initialPos = [-115.5, 0, 28.0],
+  rotationOffset: initialRot = 0.0580,
+  positionOffset: initialPos = [-132.0, 0, 16.0],
 }: LiveMapGroundProps) {
   const { invalidate } = useThree();
   const [pos, setPos] = useState(initialPos);
@@ -210,7 +210,7 @@ export default function LiveMapGround({
 
       const step = e.shiftKey ? 10 : 1;
       const rotStep = e.shiftKey ? 0.05 : 0.005;
-      
+
       setPos(p => {
         if (e.key === 'i') return [p[0], p[1], p[2] - step];
         if (e.key === 'k') return [p[0], p[1], p[2] + step];
@@ -255,8 +255,8 @@ export default function LiveMapGround({
   const extendedGroundHeight = (153 / 17) * 1254.2 * scaleY;
 
   return (
-    <group 
-      position={[pos[0], -0.65 + pos[1], pos[2]]} 
+    <group
+      position={[pos[0], -0.65 + pos[1], pos[2]]}
       rotation={[0, rot, 0]}
     >
       {showDebug && (
@@ -275,9 +275,9 @@ export default function LiveMapGround({
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
             border: '1px solid rgba(240, 192, 16, 0.4)'
           }}>
-            <b>Map Alignment Tool (Debug)</b><br/>
-            X: {pos[0].toFixed(1)} | Z: {pos[2].toFixed(1)}<br/>
-            Rot: {rot.toFixed(4)}<br/>
+            <b>Map Alignment Tool (Debug)</b><br />
+            X: {pos[0].toFixed(1)} | Z: {pos[2].toFixed(1)}<br />
+            Rot: {rot.toFixed(4)}<br />
             <small style={{ color: '#aaa' }}>I/J/K/L: Move | U/O: Rotate | Shift+M: Close</small>
           </div>
         </Html>
